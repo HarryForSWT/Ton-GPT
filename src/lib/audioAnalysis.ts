@@ -290,8 +290,8 @@ export async function analyzeAndCompare(
   }
   const mae = totalDiff / 50;
   
-  // MAE auf 0 - 100 mappen (Abweichung von 1.5 gilt als 0% Score)
-  const pitchScore = Math.max(0, Math.min(100, Math.round(100 * (1 - mae / 1.5))));
+  // MAE auf 0 - 100 mappen (Abweichung von 2.0 gilt als 0% Score)
+  const pitchScore = Math.max(0, Math.min(100, Math.round(100 * (1 - mae / 2.0))));
 
   // B. Silbenlänge (Duration Similarity)
   const durationRatio = Math.min(studentFeatures.activeDurationMs, teacherFeatures.activeDurationMs) /
@@ -423,6 +423,24 @@ function generateSyntheticPitchContour(tones: number[]): number[] {
   return contour;
 }
 
+function smoothMovingAverage(track: number[], windowSize: number = 7): number[] {
+  const result = [...track];
+  const half = Math.floor(windowSize / 2);
+  for (let i = 0; i < track.length; i++) {
+    let sum = 0;
+    let count = 0;
+    for (let w = -half; w <= half; w++) {
+      const idx = i + w;
+      if (idx >= 0 && idx < track.length) {
+        sum += track[idx];
+        count++;
+      }
+    }
+    result[i] = sum / count;
+  }
+  return result;
+}
+
 export async function analyzeAndCompareWithTTS(
   studentBlob: Blob,
   pinyinNumber: string,
@@ -448,7 +466,9 @@ export async function analyzeAndCompareWithTTS(
 
   // 3. Töne bestimmen und künstliche Referenz erzeugen
   const tones = getTonesFromPinyin(pinyinNumber, pinyin);
-  const syntheticPitch = generateSyntheticPitchContour(tones);
+  const rawSyntheticPitch = generateSyntheticPitchContour(tones);
+  // Mit gleitendem Durchschnitt glätten, um Kanten abzurunden und Übergänge natürlicher zu machen
+  const syntheticPitch = smoothMovingAverage(rawSyntheticPitch, 7);
 
   // 4. Normalisieren
   const studentNormPitch = normalizeZScore(studentFeatures.pitchTrack);
@@ -461,7 +481,8 @@ export async function analyzeAndCompareWithTTS(
     totalDiff += Math.abs(studentNormPitch[i] - teacherNormPitch[i]);
   }
   const mae = totalDiff / 50;
-  const pitchScore = Math.max(0, Math.min(100, Math.round(100 * (1 - mae / 1.5))));
+  // Toleranz bei Synthese erhöhen (Faktor 3.0 statt 1.5), da künstliche Kurven starrer als echte Stimmen sind
+  const pitchScore = Math.max(0, Math.min(100, Math.round(100 * (1 - mae / 3.0))));
 
   // B. Silbenlänge (Vergleich mit einer Zielzeit von ca. 350ms pro Silbe)
   const targetDurationMs = tones.length * 350;

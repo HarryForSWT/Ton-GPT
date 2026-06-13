@@ -16,6 +16,7 @@ export function ToneAnalyser({ vocabId, recordingTrigger, onAnalysisComplete }: 
   const t = de.toneAnalyser;
 
   const [studentRecording, setStudentRecording] = useState<AudioRecording | null>(null);
+  const [studentRecordings, setStudentRecordings] = useState<AudioRecording[]>([]);
   const [teacherRecording, setTeacherRecording] = useState<AudioRecording | null>(null);
   const [vocab, setVocab] = useState<Vocabulary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,7 +43,14 @@ export function ToneAnalyser({ vocabId, recordingTrigger, onAnalysisComplete }: 
         .filter((r) => r.role === "teacher")
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      setStudentRecording(studentRecs[0] || null);
+      setStudentRecordings(studentRecs);
+      
+      // Default to the newest student recording
+      if (studentRecs.length > 0) {
+        setStudentRecording(studentRecs[0]);
+      } else {
+        setStudentRecording(null);
+      }
       setTeacherRecording(teacherRecs[0] || null);
     } catch (err) {
       console.error("Fehler beim Laden der Aufnahmen:", err);
@@ -210,6 +218,33 @@ export function ToneAnalyser({ vocabId, recordingTrigger, onAnalysisComplete }: 
           <div>
             <p>Kein Lehrer-Audio als Referenz vorhanden. Deine Aussprache wird stattdessen mit dem mathematischen Standard-Tonverlauf verglichen.</p>
           </div>
+        </div>
+      )}
+
+      {/* Aufnahme-Auswahl (nur wenn der Schüler mindestens 1 Aufnahme hat) */}
+      {studentRecordings.length > 0 && (
+        <div className="space-y-1.5 p-3.5 bg-neutral-900/40 border border-neutral-850 rounded-xl">
+          <label className="text-[10px] font-bold text-neutral-500 uppercase tracking-wider block">
+            Auszustellende Aufnahme für den Vergleich:
+          </label>
+          <select
+            value={studentRecording?.id || ""}
+            onChange={(e) => {
+              const rec = studentRecordings.find(r => r.id === e.target.value);
+              if (rec) {
+                setStudentRecording(rec);
+                setResult(null); // Clear previous result when changing recording
+                setError("");
+              }
+            }}
+            className="w-full bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-neutral-200 outline-none focus:border-emerald-500 transition-all cursor-pointer font-mono"
+          >
+            {studentRecordings.map((r, idx) => (
+              <option key={r.id} value={r.id}>
+                Aufnahme {studentRecordings.length - idx} — {new Date(r.createdAt).toLocaleDateString("de-DE")} ({new Date(r.createdAt).toLocaleTimeString("de-DE", { hour: '2-digit', minute: '2-digit' })})
+              </option>
+            ))}
+          </select>
         </div>
       )}
 

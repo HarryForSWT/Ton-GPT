@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Mic, Square, RotateCcw, X } from "lucide-react";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { de } from "@/locales/de";
@@ -29,6 +29,14 @@ export function AudioRecorder({ onRecordingComplete, onCancel }: AudioRecorderPr
   const isStopped = state === "stopped";
   const isError = state === "error";
 
+  const [isSaved, setIsSaved] = useState(false);
+
+  useEffect(() => {
+    if (state === "recording" || state === "idle") {
+      setIsSaved(false);
+    }
+  }, [state]);
+
   const handleStop = () => {
     stopRecording();
     // The blob is set asynchronously in the hook after MediaRecorder.onstop fires
@@ -37,6 +45,7 @@ export function AudioRecorder({ onRecordingComplete, onCancel }: AudioRecorderPr
   const handleSave = () => {
     if (audioBlob && onRecordingComplete) {
       onRecordingComplete(audioBlob, mimeType || "audio/webm", durationMs);
+      setIsSaved(true);
     }
   };
 
@@ -139,12 +148,14 @@ export function AudioRecorder({ onRecordingComplete, onCancel }: AudioRecorderPr
             <RotateCcw size={15} />
             {t.reRecordBtn}
           </button>
-          <button
-            onClick={handleSave}
-            className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
-          >
-            {t.saveRecording}
-          </button>
+          {!isSaved && (
+            <button
+              onClick={handleSave}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg shadow-emerald-500/20"
+            >
+              {t.saveRecording}
+            </button>
+          )}
         </div>
       )}
 

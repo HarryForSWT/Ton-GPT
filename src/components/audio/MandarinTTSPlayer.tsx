@@ -91,7 +91,7 @@ export function MandarinTTSPlayer({ text, pinyin, className = "" }: MandarinTTSP
     }
 
     // Slow down speed for clear educational listening
-    utterance.rate = 0.6;
+    utterance.rate = 0.45;
 
     utterance.onstart = () => setIsPlaying(true);
     utterance.onend = () => setIsPlaying(false);
