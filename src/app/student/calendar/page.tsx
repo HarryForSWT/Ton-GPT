@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, ChevronLeft, ChevronRight, Flame, Trophy, PlusCircle, CheckCircle, Award } from "lucide-react";
 import { de } from "@/locales/de";
 import { getCalendarActivities, getStreakCount, getVocabList, Vocabulary, DailyActivity } from "@/lib/db";
+import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 
 export default function CalendarPage() {
   const t = de.calendar;
@@ -112,7 +113,7 @@ export default function CalendarPage() {
       <div className="max-w-2xl mx-auto relative z-10 space-y-6">
         
         {/* Header */}
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link
               href="/student"
@@ -127,6 +128,7 @@ export default function CalendarPage() {
               <p className="text-neutral-400 text-sm mt-0.5">{t.subtitle}</p>
             </div>
           </div>
+          <ThemeSwitcher />
         </div>
 
         {/* Dashboard / Stats Row */}

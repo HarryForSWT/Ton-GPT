@@ -85,12 +85,17 @@ export async function getVocabById(id: string): Promise<Vocabulary | undefined> 
   return db.get('vocabulary', id);
 }
 
-export async function addVocab(vocabData: Omit<Vocabulary, 'id' | 'createdAt' | 'learned' | 'bestScore'>): Promise<string> {
+export async function addVocab(
+  vocabData: Omit<Vocabulary, 'id' | 'createdAt' | 'learned' | 'bestScore'> & { id?: string }
+): Promise<string> {
   const db = await getDB();
   if (!db) throw new Error('IndexedDB not available');
-  const id = crypto.randomUUID();
+  const id = vocabData.id || crypto.randomUUID();
   const newVocab: Vocabulary = {
-    ...vocabData,
+    hanzi: vocabData.hanzi,
+    pinyin: vocabData.pinyin,
+    pinyinNumber: vocabData.pinyinNumber,
+    germanMeaning: vocabData.germanMeaning,
     id,
     createdAt: new Date().toISOString(),
     learned: false,

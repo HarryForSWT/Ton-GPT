@@ -1,9 +1,38 @@
 import Link from "next/link";
 import { logout } from "../auth/actions";
 import { de } from "@/locales/de";
+import { createClient } from "@/utils/supabase/server";
+import { Bell } from "lucide-react";
+import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 
-export default function StudentDashboard() {
+export default async function StudentDashboard() {
   const t = de.studentDashboard;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  let displayName = "";
+  let unreadCount = 0;
+
+  if (user) {
+    // 1. Displayname abfragen
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('display_name')
+      .eq('id', user.id)
+      .single();
+    displayName = profile?.display_name || user.email?.split('@')[0] || "";
+
+    // 2. Ungelesene reviewed Anfragen zählen
+    const { count, error } = await supabase
+      .from('pronunciation_requests')
+      .select('*', { count: 'exact', head: true })
+      .eq('student_id', user.id)
+      .eq('status', 'reviewed');
+    
+    if (!error) {
+      unreadCount = count || 0;
+    }
+  }
 
   return (
     <div className="min-h-screen bg-neutral-950 text-white p-6 relative overflow-hidden">
@@ -11,21 +40,43 @@ export default function StudentDashboard() {
       <div className="absolute top-0 right-0 w-80 h-80 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-80 h-80 bg-emerald-500/5 rounded-full blur-3xl pointer-events-none" />
 
-      <header className="mb-8 flex justify-between items-start relative z-10">
+      <header className="mb-8 flex justify-between items-start relative z-10 gap-4">
         <div>
           <h1 className="text-3xl font-extrabold bg-gradient-to-r from-teal-400 to-emerald-400 bg-clip-text text-transparent">
             {t.title}
           </h1>
-          <p className="text-neutral-400 mt-2 text-sm">{t.welcome}</p>
+          <p className="text-neutral-400 mt-2 text-sm">
+            Willkommen auf deiner Lernreise, <span className="text-emerald-400 font-bold">{displayName}</span>!
+          </p>
         </div>
-        <form action={logout}>
-          <button
-            type="submit"
-            className="text-sm font-semibold bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 px-4 py-2.5 rounded-xl transition-all active:scale-95 text-neutral-300 hover:text-white"
-          >
-            {t.logout}
-          </button>
-        </form>
+        <div className="flex items-center gap-3">
+          {/* Theme Switcher */}
+          <ThemeSwitcher />
+
+          {/* Inbox Glocke */}
+          {unreadCount > 0 && (
+            <Link
+              href="/student/requests"
+              className="relative p-2.5 bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 rounded-xl transition-all flex items-center justify-center animate-pulse shadow-sm"
+              title={`${unreadCount} neue Antwort(en) vom Lehrer!`}
+            >
+              <Bell size={18} className="fill-current animate-bounce duration-1000" />
+              <span className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 text-white text-[10px] font-black rounded-full flex items-center justify-center border-2 border-neutral-950">
+                {unreadCount}
+              </span>
+            </Link>
+          )}
+
+          {/* Logout */}
+          <form action={logout}>
+            <button
+              type="submit"
+              className="text-sm font-semibold bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 hover:border-neutral-700 px-4 py-2.5 rounded-xl transition-all active:scale-95 text-neutral-300 hover:text-white cursor-pointer shadow-sm"
+            >
+              {t.logout}
+            </button>
+          </form>
+        </div>
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 relative z-10">
@@ -46,8 +97,13 @@ export default function StudentDashboard() {
 
         <Link
           href="/student/requests"
-          className="p-6 bg-neutral-900/60 border border-neutral-800/80 rounded-2xl hover:border-blue-500/60 hover:bg-neutral-850/30 transition-all group duration-300"
+          className="p-6 bg-neutral-900/60 border border-neutral-800/80 rounded-2xl hover:border-blue-500/60 hover:bg-neutral-850/30 transition-all group duration-300 relative"
         >
+          {unreadCount > 0 && (
+            <span className="absolute top-4 right-4 flex items-center gap-1 px-2.5 py-1 bg-red-500 text-white text-xs font-black rounded-full shadow-md shadow-red-500/10 border border-red-400">
+              {unreadCount} neu
+            </span>
+          )}
           <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4">
             <svg className="w-5 h-5 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>

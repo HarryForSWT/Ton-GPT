@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Search, Plus, CheckCircle, Circle, BookOpen, Trash2 } from "lucide-react";
 import { getVocabList, deleteVocab, Vocabulary } from "@/lib/db";
 import { de } from "@/locales/de";
+import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 
 export default function VocabularyListPage() {
   const t = de.vocabList;
@@ -73,30 +74,40 @@ export default function VocabularyListPage() {
       <div className="absolute bottom-10 right-10 w-80 h-80 bg-teal-500/5 rounded-full blur-3xl pointer-events-none" />
 
       <header className="max-w-4xl mx-auto mb-8 flex flex-col md:flex-row md:justify-between md:items-center gap-4 relative z-10">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Link
-              href="/student"
-              className="p-1 hover:bg-neutral-900 rounded-lg text-neutral-400 hover:text-white transition-colors"
-              title={t.backToDashboard}
-            >
-              <ArrowLeft size={20} />
-            </Link>
-            <span className="text-xs uppercase tracking-wider font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-              Lokal
-            </span>
+        <div className="flex justify-between items-start w-full md:w-auto">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Link
+                href="/student"
+                className="p-1 hover:bg-neutral-900 rounded-lg text-neutral-400 hover:text-white transition-colors"
+                title={t.backToDashboard}
+              >
+                <ArrowLeft size={20} />
+              </Link>
+              <span className="text-xs uppercase tracking-wider font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                Lokal
+              </span>
+            </div>
+            <h1 className="text-3xl font-extrabold bg-gradient-to-r from-white via-neutral-100 to-neutral-400 bg-clip-text text-transparent">
+              {t.title}
+            </h1>
+            <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
           </div>
-          <h1 className="text-3xl font-extrabold bg-gradient-to-r from-white via-neutral-100 to-neutral-400 bg-clip-text text-transparent">
-            {t.title}
-          </h1>
-          <p className="text-neutral-400 text-sm mt-1">{t.subtitle}</p>
+          <div className="md:hidden">
+            <ThemeSwitcher />
+          </div>
         </div>
-        <Link href="/student/vocab/add">
-          <button className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white px-5 py-3 rounded-2xl transition-all font-semibold shadow-lg shadow-emerald-500/10 w-full md:w-auto">
-            <Plus size={18} />
-            {t.addWordBtn}
-          </button>
-        </Link>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="hidden md:block">
+            <ThemeSwitcher />
+          </div>
+          <Link href="/student/vocab/add" className="w-full md:w-auto">
+            <button className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white px-5 py-3 rounded-2xl transition-all font-semibold shadow-lg shadow-emerald-500/10 w-full md:w-auto cursor-pointer">
+              <Plus size={18} />
+              {t.addWordBtn}
+            </button>
+          </Link>
+        </div>
       </header>
 
       {/* Search and Filters */}

@@ -79,8 +79,9 @@ export function MandarinTTSPlayer({ text, pinyin, className = "" }: MandarinTTSP
       return;
     }
 
-    // Speak the text
-    const utterance = new SpeechSynthesisUtterance(text);
+    // Bevorzuge das Pinyin für das Vorlesen, damit manuell korrigierte Aussprachen (z.B. Polyphone) beachtet werden
+    const textToSpeak = pinyin ? pinyin : text;
+    const utterance = new SpeechSynthesisUtterance(textToSpeak);
     utteranceRef.current = utterance;
 
     if (voice) {

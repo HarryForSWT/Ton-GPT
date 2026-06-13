@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, Plus, ChevronRight, Clock, CheckCircle2, Mic } from "lucide-react";
 import { de } from "@/locales/de";
 import { getMyRequests, PronunciationRequest } from "@/lib/requests";
+import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 
 function timeAgo(isoDate: string): string {
   const diff = Date.now() - new Date(isoDate).getTime();
@@ -40,7 +41,7 @@ export default function MyRequestsPage() {
       <div className="max-w-2xl mx-auto relative z-10">
 
         {/* Header */}
-        <div className="flex items-start justify-between mb-8">
+        <div className="flex items-start justify-between mb-8 gap-4">
           <div className="flex items-center gap-3">
             <Link
               href="/student"
@@ -55,13 +56,16 @@ export default function MyRequestsPage() {
               <p className="text-neutral-500 text-sm mt-0.5">{t.subtitle}</p>
             </div>
           </div>
-          <Link
-            href="/student/requests/new"
-            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-500/20"
-          >
-            <Plus size={16} />
-            Neu
-          </Link>
+          <div className="flex items-center gap-2">
+            <ThemeSwitcher />
+            <Link
+              href="/student/requests/new"
+              className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-emerald-500/20 cursor-pointer"
+            >
+              <Plus size={16} />
+              Neu
+            </Link>
+          </div>
         </div>
 
         {/* Loading */}

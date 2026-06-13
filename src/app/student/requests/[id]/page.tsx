@@ -77,8 +77,9 @@ export default function RequestDetailPage({ params }: Props) {
       let vocabId = matchedVocab?.id;
 
       if (!vocabId) {
-        // Wort existiert lokal nicht, also neu anlegen
+        // Wort existiert lokal nicht, also neu anlegen (mit der ID der Anfrage, um UUIDs zu synchronisieren)
         vocabId = await addVocab({
+          id: request.id,
           hanzi: request.hanzi.trim(),
           pinyin: request.pinyin.trim(),
           pinyinNumber: request.pinyin_number?.trim() || request.pinyin.trim(),
@@ -143,6 +144,7 @@ export default function RequestDetailPage({ params }: Props) {
       if (!targetId) {
         const { addVocab } = await import("@/lib/db");
         targetId = await addVocab({
+          id: request.id,
           hanzi: request.hanzi.trim(),
           pinyin: request.pinyin.trim(),
           pinyinNumber: request.pinyin_number?.trim() || request.pinyin.trim(),
