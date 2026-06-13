@@ -108,12 +108,20 @@ export function useAudioRecorder(): UseAudioRecorderResult {
       recorder.onstop = () => {
         const finalMime = mimeType || 'audio/webm';
         const blob = new Blob(chunksRef.current, { type: finalMime });
-        setAudioBlob(blob);
-        setState('stopped');
+        
         stopStream();
         if (timerRef.current) {
           clearInterval(timerRef.current);
           timerRef.current = null;
+        }
+
+        if (blob.size === 0) {
+          setError('Aufnahme ist leer (0 bytes). Bitte überprüfe deine Mikrofon-Einstellungen oder System-Berechtigungen.');
+          setState('error');
+          setAudioBlob(null);
+        } else {
+          setAudioBlob(blob);
+          setState('stopped');
         }
       };
 
