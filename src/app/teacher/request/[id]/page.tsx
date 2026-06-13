@@ -1,14 +1,16 @@
 "use client";
 
 import React, { useState, useEffect, use, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Send, Mic2, MessageSquare, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Send, Mic2, MessageSquare, CheckCircle2, Trash2 } from "lucide-react";
 import { de } from "@/locales/de";
 import {
   getRequestById,
   getResponseForRequest,
   getSignedAudioUrl,
   submitTeacherResponse,
+  deletePronunciationRequest,
   uploadAudio,
   PronunciationRequest,
   TeacherResponse,
@@ -36,6 +38,7 @@ async function fetchBlob(url: string): Promise<{ blob: Blob; mimeType: string } 
 }
 
 export default function ReviewRequestPage({ params }: Props) {
+  const router = useRouter();
   const { id } = use(params);
   const t = de.teacherReview;
   const ta = de.audio;
@@ -121,6 +124,20 @@ export default function ReviewRequestPage({ params }: Props) {
     }
   }, [comment, audioBlob, recMimeType, id, durationMs, t]);
 
+  const handleDeleteRequest = async () => {
+    if (!request) return;
+    if (confirm("Möchtest du diese Anfrage wirklich endgültig aus der Cloud löschen? (Das Schüler-Audio und dein Feedback gehen dabei verloren)")) {
+      setSubmitting(true);
+      try {
+        await deletePronunciationRequest(request.id, request.student_audio_url, existingResponse?.audio_url || null);
+        router.push("/teacher");
+      } catch (err) {
+        console.error("Fehler beim Löschen der Anfrage:", err);
+        setSubmitting(false);
+      }
+    }
+  };
+
   const isRecording = recState === "recording";
   const isRequesting = recState === "requesting";
   const hasBlobReady = recState === "stopped" && !!audioBlob;
@@ -147,14 +164,24 @@ export default function ReviewRequestPage({ params }: Props) {
       <div className="max-w-lg mx-auto space-y-5">
 
         {/* Header */}
-        <div className="flex items-center gap-3 mb-2">
-          <Link
-            href="/teacher"
-            className="p-2 hover:bg-neutral-800 rounded-xl transition-colors text-neutral-400 hover:text-white"
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/teacher"
+              className="p-2 hover:bg-neutral-800 rounded-xl transition-colors text-neutral-400 hover:text-white"
+            >
+              <ArrowLeft size={20} />
+            </Link>
+            <h1 className="text-xl font-bold text-white">{t.title}</h1>
+          </div>
+          <button
+            onClick={handleDeleteRequest}
+            disabled={submitting}
+            className="p-2 text-neutral-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors disabled:opacity-50"
+            title="Anfrage löschen"
           >
-            <ArrowLeft size={20} />
-          </Link>
-          <h1 className="text-xl font-bold text-white">{t.title}</h1>
+            <Trash2 size={20} />
+          </button>
         </div>
 
         {/* Bereits beantwortet */}

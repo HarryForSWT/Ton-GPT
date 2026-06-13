@@ -73,6 +73,10 @@ CREATE POLICY "Teachers can read all requests" ON pronunciation_requests FOR SEL
 CREATE POLICY "Teachers can update all requests" ON pronunciation_requests FOR UPDATE USING (
     (auth.jwt()->'user_metadata'->>'role') = 'teacher'
 );
+CREATE POLICY "Students can delete own requests" ON pronunciation_requests FOR DELETE USING (auth.uid() = student_id);
+CREATE POLICY "Teachers can delete all requests" ON pronunciation_requests FOR DELETE USING (
+    (auth.jwt()->'user_metadata'->>'role') = 'teacher'
+);
 
 
 -- Teacher responses table
