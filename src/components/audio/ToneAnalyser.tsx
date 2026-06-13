@@ -3,8 +3,8 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Award, AlertCircle, Play, Info } from "lucide-react";
 import { de } from "@/locales/de";
-import { getAudioRecordingsByVocabId, AudioRecording } from "@/lib/db";
-import { analyzeAndCompare, AnalysisResult } from "@/lib/audioAnalysis";
+import { getAudioRecordingsByVocabId, getVocabById, AudioRecording, Vocabulary } from "@/lib/db";
+import { analyzeAndCompare, analyzeAndCompareWithTTS, AnalysisResult } from "@/lib/audioAnalysis";
 
 interface ToneAnalyserProps {
   vocabId: string;
@@ -16,6 +16,7 @@ export function ToneAnalyser({ vocabId, onAnalysisComplete }: ToneAnalyserProps)
 
   const [studentRecording, setStudentRecording] = useState<AudioRecording | null>(null);
   const [teacherRecording, setTeacherRecording] = useState<AudioRecording | null>(null);
+  const [vocab, setVocab] = useState<Vocabulary | null>(null);
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
@@ -26,6 +27,9 @@ export function ToneAnalyser({ vocabId, onAnalysisComplete }: ToneAnalyserProps)
   // Aufnahmen laden
   const loadRecordings = useCallback(async () => {
     try {
+      const v = await getVocabById(vocabId);
+      if (v) setVocab(v);
+
       const recordings = await getAudioRecordingsByVocabId(vocabId);
       
       // Jeweils die neueste Aufnahme nehmen
@@ -131,14 +135,27 @@ export function ToneAnalyser({ vocabId, onAnalysisComplete }: ToneAnalyserProps)
   }, [result]);
 
   const handleStartAnalysis = async () => {
-    if (!studentRecording || !teacherRecording) return;
+    if (!studentRecording) return;
     setAnalyzing(true);
     setError("");
     setResult(null);
 
     try {
-      // Analyse aufrufen
-      const analysisResult = await analyzeAndCompare(studentRecording.blob, teacherRecording.blob);
+      let analysisResult;
+      if (teacherRecording) {
+        // Normaler Vergleich mit Lehrer-Referenzaudio
+        analysisResult = await analyzeAndCompare(studentRecording.blob, teacherRecording.blob);
+      } else if (vocab) {
+        // Vergleich mit künstlichem Standard-Ausspracheverlauf (TTS)
+        analysisResult = await analyzeAndCompareWithTTS(
+          studentRecording.blob,
+          vocab.pinyinNumber || vocab.pinyin,
+          vocab.pinyin
+        );
+      } else {
+        throw new Error("Vokabeldaten nicht geladen.");
+      }
+
       setResult(analysisResult);
       
       if (onAnalysisComplete) {
@@ -161,7 +178,8 @@ export function ToneAnalyser({ vocabId, onAnalysisComplete }: ToneAnalyserProps)
 
   if (loading) return null;
 
-  const hasBoth = !!studentRecording && !!teacherRecording;
+  const hasStudent = !!studentRecording;
+  const hasTeacher = !!teacherRecording;
 
   return (
     <div className="bg-neutral-950/30 border border-neutral-850 rounded-2xl p-5 space-y-5">
@@ -176,17 +194,20 @@ export function ToneAnalyser({ vocabId, onAnalysisComplete }: ToneAnalyserProps)
       </div>
 
       {/* Fehlende Aufnahmen */}
-      {!hasBoth && (
+      {!hasStudent && (
         <div className="p-4 bg-neutral-900 border border-neutral-800 rounded-xl flex gap-3 text-xs text-neutral-400">
           <AlertCircle className="w-4 h-4 text-neutral-500 shrink-0 mt-0.5" />
           <div>
-            {!studentRecording && !teacherRecording ? (
-              <p>Für dieses Wort sind noch keine Aufnahmen vorhanden. Bitte nimm deine Aussprache auf.</p>
-            ) : !studentRecording ? (
-              <p>{t.needBothRecordings}</p>
-            ) : (
-              <p>Es ist noch kein Lehrer-Audio als Referenz vorhanden. Sende eine Aussprache-Anfrage an den Lehrer, um eine Bewertung zu erhalten.</p>
-            )}
+            <p>Für dieses Wort sind noch keine Aufnahmen vorhanden. Bitte nimm deine Aussprache auf.</p>
+          </div>
+        </div>
+      )}
+
+      {hasStudent && !hasTeacher && (
+        <div className="p-4 bg-blue-950/20 border border-blue-900/40 rounded-xl flex gap-3 text-xs text-blue-300">
+          <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
+          <div>
+            <p>Kein Lehrer-Audio als Referenz vorhanden. Deine Aussprache wird stattdessen mit dem mathematischen Standard-Tonverlauf verglichen.</p>
           </div>
         </div>
       )}
@@ -200,7 +221,7 @@ export function ToneAnalyser({ vocabId, onAnalysisComplete }: ToneAnalyserProps)
       )}
 
       {/* Button & Loader */}
-      {hasBoth && !result && (
+      {hasStudent && !result && (
         <button
           onClick={handleStartAnalysis}
           disabled={analyzing}
@@ -214,7 +235,7 @@ export function ToneAnalyser({ vocabId, onAnalysisComplete }: ToneAnalyserProps)
           ) : (
             <>
               <Play className="w-4 h-4 fill-neutral-950" />
-              {t.analyzeBtn}
+              {hasTeacher ? t.analyzeBtn : "Mit Standard-Tönen vergleichen"}
             </>
           )}
         </button>
@@ -252,7 +273,7 @@ export function ToneAnalyser({ vocabId, onAnalysisComplete }: ToneAnalyserProps)
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="w-2.5 h-1 bg-[#10b981] rounded-full" />
-                  <span>{t.legendTeacher}</span>
+                  <span>{hasTeacher ? t.legendTeacher : "Standard-Referenz"}</span>
                 </div>
               </div>
             </div>

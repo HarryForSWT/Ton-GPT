@@ -346,3 +346,173 @@ export async function analyzeAndCompare(
     rhythmFeedback
   };
 }
+
+export function getTonesFromPinyin(pinyinNumber: string, pinyin: string): number[] {
+  // Versuche Ziffern aus pinyinNumber zu extrahieren
+  const digits = pinyinNumber.match(/[1-5]/g);
+  if (digits && digits.length > 0) {
+    return digits.map(d => parseInt(d, 10));
+  }
+
+  // Fallback: Akzente in pinyin analysieren
+  const syllables = pinyin.split(/\s+/);
+  const tones: number[] = [];
+
+  const tone1 = /[āēīōūǖĀĒĪŌŪǕ]/;
+  const tone2 = /[áéíóúǘÁÉÍÓÚǗ]/;
+  const tone3 = /[ǎěǐǒǔǚǍĚǏǑǓǙ]/;
+  const tone4 = /[àèìòùǜÀÈÌÒÙǛ]/;
+
+  for (const syl of syllables) {
+    if (!syl.trim()) continue;
+    if (tone1.test(syl)) {
+      tones.push(1);
+    } else if (tone2.test(syl)) {
+      tones.push(2);
+    } else if (tone3.test(syl)) {
+      tones.push(3);
+    } else if (tone4.test(syl)) {
+      tones.push(4);
+    } else {
+      tones.push(5); // Neutraler Ton
+    }
+  }
+
+  return tones.length > 0 ? tones : [1];
+}
+
+function generateSyntheticPitchContour(tones: number[]): number[] {
+  const totalPoints = 50;
+  const contour: number[] = [];
+  const N = tones.length;
+
+  for (let s = 0; s < N; s++) {
+    const tone = tones[s];
+    const startIdx = Math.floor((s / N) * totalPoints);
+    const endIdx = Math.floor(((s + 1) / N) * totalPoints);
+    const len = endIdx - startIdx;
+
+    for (let i = 0; i < len; i++) {
+      const t = i / (len - 1 || 1); // Normalisiert auf [0, 1]
+      let val = 0;
+
+      if (tone === 1) {
+        val = 1.0; // Hoch-flach
+      } else if (tone === 2) {
+        val = -0.6 + t * 1.4; // Steigend
+      } else if (tone === 3) {
+        // Fallend-steigend (Dipp)
+        val = 4.8 * (t - 0.45) * (t - 0.45) - 1.0;
+      } else if (tone === 4) {
+        val = 1.0 - t * 2.2; // Fallend
+      } else {
+        // Neutraler Ton (leicht fallend)
+        val = -0.2 - t * 0.6;
+      }
+      contour.push(val);
+    }
+  }
+
+  while (contour.length < totalPoints) {
+    contour.push(contour[contour.length - 1] || 0);
+  }
+  if (contour.length > totalPoints) {
+    contour.splice(totalPoints);
+  }
+
+  return contour;
+}
+
+export async function analyzeAndCompareWithTTS(
+  studentBlob: Blob,
+  pinyinNumber: string,
+  pinyin: string
+): Promise<AnalysisResult> {
+  if (typeof window === "undefined") {
+    throw new Error("Audio-Analyse kann nur im Browser ausgeführt werden.");
+  }
+
+  const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+  const audioCtx = new AudioContextClass();
+
+  // 1. Student-Audio decodieren
+  const studentArrayBuffer = await studentBlob.arrayBuffer();
+  const studentAudioBuffer = await audioCtx.decodeAudioData(studentArrayBuffer);
+
+  // 2. Student Features extrahieren
+  const studentFeatures = extractSpeechPitchTrack(studentAudioBuffer);
+
+  if (studentFeatures.activeDurationMs === 0) {
+    throw new Error("Es konnte keine Sprache im Schüler-Audio erkannt werden. Bitte lauter sprechen!");
+  }
+
+  // 3. Töne bestimmen und künstliche Referenz erzeugen
+  const tones = getTonesFromPinyin(pinyinNumber, pinyin);
+  const syntheticPitch = generateSyntheticPitchContour(tones);
+
+  // 4. Normalisieren
+  const studentNormPitch = normalizeZScore(studentFeatures.pitchTrack);
+  const teacherNormPitch = normalizeZScore(syntheticPitch);
+
+  // 5. Scores berechnen
+  // A. Tonverlauf (Pitch-Abweichung)
+  let totalDiff = 0;
+  for (let i = 0; i < 50; i++) {
+    totalDiff += Math.abs(studentNormPitch[i] - teacherNormPitch[i]);
+  }
+  const mae = totalDiff / 50;
+  const pitchScore = Math.max(0, Math.min(100, Math.round(100 * (1 - mae / 1.5))));
+
+  // B. Silbenlänge (Vergleich mit einer Zielzeit von ca. 350ms pro Silbe)
+  const targetDurationMs = tones.length * 350;
+  const durationRatio = Math.min(studentFeatures.activeDurationMs, targetDurationMs) /
+                        Math.max(studentFeatures.activeDurationMs, targetDurationMs);
+  const durationScore = Math.round(durationRatio * 100);
+
+  // C. Rhythmus / Pause (Vergleich mit einer Zielpausenquote von 10%)
+  const rhythmDiff = Math.abs(studentFeatures.silenceRatio - 0.1);
+  const rhythmScore = Math.max(0, Math.round(100 * (1 - rhythmDiff * 1.5)));
+
+  // D. Gesamtbewertung
+  const score = Math.round(pitchScore * 0.7 + durationScore * 0.15 + rhythmScore * 0.15);
+
+  // 6. Feedback generieren
+  let pitchFeedback = "";
+  if (pitchScore >= 85) {
+    pitchFeedback = "Hervorragender Tonverlauf! Deine Melodiekurve stimmt perfekt mit den Standardtönen überein.";
+  } else if (pitchScore >= 67) {
+    pitchFeedback = "Guter Tonverlauf. Die Tonrichtung stimmt weitgehend, versuche den Verlauf noch etwas präziser zu halten.";
+  } else {
+    pitchFeedback = "Der Tonverlauf weicht ab. Achte genau auf die vier Pinyin-Töne (hoch-flach, steigend, fallend-steigend, fallend).";
+  }
+
+  let durationFeedback = "";
+  if (durationScore >= 80) {
+    durationFeedback = "Sehr gutes Sprechtempo.";
+  } else if (studentFeatures.activeDurationMs > targetDurationMs) {
+    durationFeedback = "Du hast das Wort etwas zu langsam oder gedehnt gesprochen.";
+  } else {
+    durationFeedback = "Du hast das Wort sehr schnell oder abgehackt gesprochen.";
+  }
+
+  let rhythmFeedback = "";
+  if (rhythmScore >= 80) {
+    rhythmFeedback = "Natürlicher Sprechrhythmus.";
+  } else {
+    rhythmFeedback = "Achte auf einen gleichmäßigeren Redefluss.";
+  }
+
+  await audioCtx.close();
+
+  return {
+    score,
+    pitchScore,
+    durationScore,
+    rhythmScore,
+    studentPitch: studentNormPitch,
+    teacherPitch: teacherNormPitch,
+    pitchFeedback,
+    durationFeedback,
+    rhythmFeedback
+  };
+}

@@ -9,6 +9,7 @@ import { de } from "@/locales/de";
 import { Button } from "@/components/ui/Button";
 import { AudioControls } from "@/components/audio/AudioControls";
 import { ToneAnalyser } from "@/components/audio/ToneAnalyser";
+import { MandarinTTSPlayer } from "@/components/audio/MandarinTTSPlayer";
 
 interface VocabularyDetailPageProps {
   params: Promise<{ id: string }>;
@@ -307,6 +308,11 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
               </h2>
               <p className="text-xl text-emerald-400 font-medium font-mono mb-1">{vocab.pinyin}</p>
               <p className="text-neutral-500 text-sm font-mono">{vocab.pinyinNumber}</p>
+            </div>
+
+            {/* Standard Speech Synthesis TTS Player */}
+            <div className="bg-neutral-950/20 border border-neutral-850/80 rounded-2xl p-4">
+              <MandarinTTSPlayer text={vocab.hanzi} pinyin={vocab.pinyin} />
             </div>
 
             {/* Meanings & translation details */}

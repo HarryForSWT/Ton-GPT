@@ -14,6 +14,7 @@ import {
   TeacherResponse,
 } from "@/lib/requests";
 import { AudioPlayer } from "@/components/audio/AudioPlayer";
+import { MandarinTTSPlayer } from "@/components/audio/MandarinTTSPlayer";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -265,11 +266,17 @@ export default function RequestDetailPage({ params }: Props) {
           </div>
 
           {!reviewed || !response ? (
-            <div className="flex flex-col items-center gap-3 py-6 text-center">
-              <div className="w-12 h-12 rounded-full bg-neutral-800 flex items-center justify-center">
-                <Clock size={20} className="text-neutral-600" />
+            <div className="space-y-4">
+              <div className="flex flex-col items-center gap-3 py-6 text-center">
+                <div className="w-12 h-12 rounded-full bg-neutral-800 flex items-center justify-center">
+                  <Clock size={20} className="text-neutral-600" />
+                </div>
+                <p className="text-neutral-500 text-sm max-w-xs">{t.noFeedbackYet}</p>
               </div>
-              <p className="text-neutral-500 text-sm max-w-xs">{t.noFeedbackYet}</p>
+              <div className="border-t border-neutral-800 pt-4 space-y-2">
+                <p className="text-xs text-neutral-500 font-semibold uppercase tracking-wider">Aussprache-Hilfe (Automatisch)</p>
+                <MandarinTTSPlayer text={request.hanzi} pinyin={request.pinyin} />
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
