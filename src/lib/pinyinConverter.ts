@@ -49,7 +49,7 @@ function getToneChar(vowel: string, tone: number): string {
 }
 
 function addToneToSyllable(syllable: string, tone: number): string {
-  let s = syllable.replace(/v/g, 'ü').replace(/V/g, 'Ü');
+  const s = syllable.replace(/v/g, 'ü').replace(/V/g, 'Ü');
   
   if (tone < 1 || tone > 4) {
     return s;
@@ -130,9 +130,9 @@ export function suggestPinyin(hanzi: string): { pinyinSymbol: string; pinyinNumb
 
   try {
     // Generiert Pinyin mit Symbolen (Standard)
-    const pinyinSymbol = pinyin(hanzi, { toneType: "symbol", nonLang: "keep" });
+    const pinyinSymbol = pinyin(hanzi, { toneType: "symbol" });
     // Generiert Pinyin mit Nummern
-    const pinyinNumber = pinyin(hanzi, { toneType: "num", nonLang: "keep" });
+    const pinyinNumber = pinyin(hanzi, { toneType: "num" });
 
     return {
       pinyinSymbol: pinyinSymbol.trim(),

@@ -9,7 +9,7 @@ interface MandarinTTSPlayerProps {
   className?: string;
 }
 
-export function MandarinTTSPlayer({ text, pinyin, className = "" }: MandarinTTSPlayerProps) {
+export function MandarinTTSPlayer({ text, className = "" }: MandarinTTSPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
   const [voice, setVoice] = useState<SpeechSynthesisVoice | null>(null);
   const [hasCheckedVoices, setHasCheckedVoices] = useState(false);

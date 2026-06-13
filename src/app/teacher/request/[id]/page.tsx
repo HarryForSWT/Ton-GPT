@@ -3,7 +3,7 @@
 import React, { useState, useEffect, use, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Send, Mic2, MessageSquare, CheckCircle2, Trash2, Bell } from "lucide-react";
+import { ArrowLeft, Send, Mic2, MessageSquare, CheckCircle2, Trash2 } from "lucide-react";
 import { de } from "@/locales/de";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 import {
