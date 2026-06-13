@@ -8,6 +8,7 @@ import { addVocab } from "@/lib/db";
 import { de } from "@/locales/de";
 import { Button } from "@/components/ui/Button";
 import { ToneHelper } from "@/components/ui/ToneHelper";
+import { suggestPinyin, pinyinNumberToSymbol, pinyinSymbolToNumber } from "@/lib/pinyinConverter";
 
 export default function AddVocabularyPage() {
   const router = useRouter();
@@ -29,7 +30,23 @@ export default function AddVocabularyPage() {
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    
+    setForm((prev) => {
+      const updated = { ...prev, [name]: value };
+      
+      if (name === "hanzi") {
+        const suggestions = suggestPinyin(value);
+        updated.pinyin = suggestions.pinyinSymbol;
+        updated.pinyinNumber = suggestions.pinyinNumber;
+      } else if (name === "pinyin") {
+        updated.pinyinNumber = pinyinSymbolToNumber(value);
+      } else if (name === "pinyinNumber") {
+        updated.pinyin = pinyinNumberToSymbol(value);
+      }
+      
+      return updated;
+    });
+
     if (error) setError("");
   };
 
@@ -43,7 +60,11 @@ export default function AddVocabularyPage() {
     const currentValue = form.pinyin;
     const newValue = currentValue.substring(0, start) + char + currentValue.substring(end);
 
-    setForm((prev) => ({ ...prev, pinyin: newValue }));
+    setForm((prev) => ({
+      ...prev,
+      pinyin: newValue,
+      pinyinNumber: pinyinSymbolToNumber(newValue),
+    }));
     if (error) setError("");
 
     // Restore focus and cursor position after React re-render
