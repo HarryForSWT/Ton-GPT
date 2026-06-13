@@ -50,6 +50,9 @@ export function ToneAnalyser({ vocabId, recordingTrigger, onAnalysisComplete }: 
         setStudentRecording(studentRecs[0]);
       } else {
         setStudentRecording(null);
+        // Alle Aufnahmen wurden gelöscht → Ergebnisse zurücksetzen
+        setResult(null);
+        setError("");
       }
       setTeacherRecording(teacherRecs[0] || null);
     } catch (err) {

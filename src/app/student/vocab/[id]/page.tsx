@@ -458,6 +458,7 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
                   role="student"
                   label={td.myRecordingLabel}
                   onRecordingSaved={() => setRecordingTrigger(prev => prev + 1)}
+                  onRecordingDeleted={() => setRecordingTrigger(prev => prev + 1)}
                 />
               </div>
 

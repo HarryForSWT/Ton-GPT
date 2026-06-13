@@ -16,11 +16,13 @@ interface AudioControlsProps {
   label?: string;
   /** Callback triggered when a new recording is successfully saved */
   onRecordingSaved?: () => void;
+  /** Callback triggered when a recording is deleted */
+  onRecordingDeleted?: () => void;
   /** If true, the recording button (recorder) is hidden */
   hideRecorder?: boolean;
 }
 
-export function AudioControls({ vocabId, role, label, onRecordingSaved, hideRecorder = false }: AudioControlsProps) {
+export function AudioControls({ vocabId, role, label, onRecordingSaved, onRecordingDeleted, hideRecorder = false }: AudioControlsProps) {
   const t = de.audio;
   const [savedRecordings, setSavedRecordings] = useState<AudioRecording[]>([]);
   const [mounted, setMounted] = useState(false);
@@ -76,10 +78,13 @@ export function AudioControls({ vocabId, role, label, onRecordingSaved, hideReco
     try {
       await deleteAudioRecording(id);
       setSavedRecordings((prev) => prev.filter((r) => r.id !== id));
+      if (onRecordingDeleted) {
+        onRecordingDeleted();
+      }
     } catch (err) {
       console.error("Failed to delete recording:", err);
     }
-  }, [t.deleteConfirm]);
+  }, [t.deleteConfirm, onRecordingDeleted]);
 
   if (!mounted) return null;
 
