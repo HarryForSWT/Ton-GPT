@@ -72,7 +72,10 @@ export function useAudioPlayer(): UseAudioPlayerResult {
       }
       
       let finalBlob = blob;
-      if (blob.type !== finalType) {
+      // Only recreate/wrap the blob if the type is generic/missing (like octet-stream)
+      // If it's already a valid audio/ type, keep it exactly as is to avoid metadata stripping.
+      const isGenericType = !blob.type || blob.type.includes('octet-stream') || blob.type.includes('x-www-form-urlencoded');
+      if (isGenericType && finalType && finalType !== blob.type) {
         finalBlob = new Blob([blob], { type: finalType });
       }
 
@@ -82,7 +85,8 @@ export function useAudioPlayer(): UseAudioPlayerResult {
       const audio = new Audio();
       audioRef.current = audio;
 
-      audio.preload = 'metadata';
+      // Set preload to 'auto' so Chrome fully loads the blob in memory, avoiding range request decoding issues
+      audio.preload = 'auto';
       audio.src = url;
 
       audio.onloadedmetadata = () => {

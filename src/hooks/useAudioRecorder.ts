@@ -136,8 +136,8 @@ export function useAudioRecorder(): UseAudioRecorderResult {
         }
       };
 
-      // Collect data every 250ms for reliable streaming
-      recorder.start(250);
+      // Start recording the entire audio in one single chunk (more reliable, prevents incomplete headers)
+      recorder.start();
       startTimeRef.current = Date.now();
       setState('recording');
 
