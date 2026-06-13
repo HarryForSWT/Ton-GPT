@@ -106,7 +106,13 @@ export function useAudioPlayer(): UseAudioPlayerResult {
 
       audio.onerror = () => {
         const errObj = audio.error;
-        console.error('HTMLAudioElement error:', errObj);
+        console.error('HTMLAudioElement error details:', {
+          code: errObj?.code,
+          message: errObj?.message,
+          blobSize: finalBlob.size,
+          blobType: finalBlob.type,
+          url: url
+        });
         setError(`Audio konnte nicht geladen werden (Code: ${errObj?.code || 'unbekannt'}).`);
         setState('error');
       };

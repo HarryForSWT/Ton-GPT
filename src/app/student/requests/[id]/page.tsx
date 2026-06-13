@@ -29,12 +29,24 @@ async function fetchBlob(url: string): Promise<{ blob: Blob; mimeType: string } 
     if (blob.type.includes("json") || blob.type.includes("html") || blob.type.includes("text")) {
       return null;
     }
+
+    // Debug: read first 16 bytes to check signature
+    try {
+      const arrBuf = await blob.slice(0, 16).arrayBuffer();
+      const bytes = new Uint8Array(arrBuf);
+      const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join(' ');
+      console.log('Fetched audio blob:', blob.size, 'bytes, type:', blob.type, 'First 16 bytes (Hex):', hex);
+    } catch (e) {
+      console.error('Failed to read blob slice:', e);
+    }
+
     let finalMime = blob.type || "audio/webm";
     if (finalMime.includes("octet-stream") || finalMime.includes("x-www-form-urlencoded")) {
       finalMime = "audio/webm";
     }
     return { blob, mimeType: finalMime };
-  } catch {
+  } catch (err) {
+    console.error('fetchBlob error:', err);
     return null;
   }
 }
