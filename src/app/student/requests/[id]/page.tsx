@@ -20,7 +20,13 @@ interface Props {
 async function fetchBlob(url: string): Promise<{ blob: Blob; mimeType: string } | null> {
   try {
     const res = await fetch(url);
+    if (!res.ok) {
+      return null;
+    }
     const blob = await res.blob();
+    if (blob.type.includes("json") || blob.type.includes("html") || blob.type.includes("text")) {
+      return null;
+    }
     return { blob, mimeType: blob.type || "audio/webm" };
   } catch {
     return null;
