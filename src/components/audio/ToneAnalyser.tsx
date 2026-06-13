@@ -366,14 +366,6 @@ export function ToneAnalyser({ vocabId, recordingTrigger, onAnalysisComplete }: 
 
           </div>
 
-          {/* Erneuter Vergleich */}
-          <button
-            onClick={handleStartAnalysis}
-            disabled={analyzing}
-            className="w-full py-2.5 bg-neutral-900 hover:bg-neutral-800 text-neutral-400 hover:text-white border border-neutral-800 hover:border-neutral-700 transition-all font-semibold rounded-xl text-xs active:scale-98 disabled:opacity-50"
-          >
-            {analyzing ? t.analyzing : "Erneut analysieren"}
-          </button>
 
         </div>
       )}
