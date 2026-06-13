@@ -79,9 +79,8 @@ export function MandarinTTSPlayer({ text, pinyin, className = "" }: MandarinTTSP
       return;
     }
 
-    // Bevorzuge das Pinyin für das Vorlesen, damit manuell korrigierte Aussprachen (z.B. Polyphone) beachtet werden
-    const textToSpeak = pinyin ? pinyin : text;
-    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+    // Speak the text (Hanzi characters) directly so the browser's Chinese TTS engine pronounces it correctly
+    const utterance = new SpeechSynthesisUtterance(text);
     utteranceRef.current = utterance;
 
     if (voice) {
@@ -126,11 +125,6 @@ export function MandarinTTSPlayer({ text, pinyin, className = "" }: MandarinTTSP
           )}
         </button>
 
-        {pinyin && (
-          <span className="text-xs text-neutral-500 font-mono text-center sm:text-left">
-            Gelesen als: {pinyin}
-          </span>
-        )}
       </div>
 
       {voicesError && hasCheckedVoices && (

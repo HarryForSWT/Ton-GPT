@@ -39,7 +39,15 @@ body {
 
   /* Weißer Text wird standardmäßig dunkel */
   --color-white: #0a0a0a;
+
+  /* Farb-Akzente für bessere Lesbarkeit abdunkeln */
+  --color-blue-400: #1d4ed8;    /* blue-700 */
+  --color-emerald-400: #047857; /* emerald-700 */
+  --color-teal-400: #0f766e;    /* teal-700 */
+  --color-amber-400: #b45309;   /* amber-700 */
+  --color-red-400: #b91c1c;     /* red-700 */
 }
+
 
 .light body {
   background-color: #f9fafb !important;

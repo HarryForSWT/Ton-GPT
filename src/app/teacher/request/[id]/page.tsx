@@ -3,8 +3,9 @@
 import React, { useState, useEffect, use, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Send, Mic2, MessageSquare, CheckCircle2, Trash2 } from "lucide-react";
+import { ArrowLeft, Send, Mic2, MessageSquare, CheckCircle2, Trash2, Bell } from "lucide-react";
 import { de } from "@/locales/de";
+import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 import {
   getRequestById,
   getResponseForRequest,
@@ -85,12 +86,30 @@ export default function ReviewRequestPage({ params }: Props) {
       const req = await getRequestById(id);
       setRequest(req);
 
-      if (req?.student_audio_url && req.student_audio_url !== "no-audio") {
-        try {
-          const url = await getSignedAudioUrl("student-audio", req.student_audio_url);
-          const data = await fetchBlob(url);
-          setStudentBlob(data);
-        } catch {/* ignore */}
+      if (req) {
+        // Gelesen-Status für Lehrer in Cookie speichern, wenn Status noch pending ist
+        if (req.status === "pending") {
+          try {
+            const cookies = document.cookie.split("; ");
+            const readCookie = cookies.find(row => row.startsWith("read_teacher_requests="));
+            const readIds = readCookie ? readCookie.split("=")[1].split(",").filter(Boolean) : [];
+            
+            if (!readIds.includes(req.id)) {
+              readIds.push(req.id);
+              document.cookie = `read_teacher_requests=${readIds.join(",")}; path=/; max-age=31536000; SameSite=Lax`;
+            }
+          } catch (e) {
+            console.error("Fehler beim Setzen des Cookie-Gelesen-Status für Lehrer:", e);
+          }
+        }
+
+        if (req.student_audio_url && req.student_audio_url !== "no-audio") {
+          try {
+            const url = await getSignedAudioUrl("student-audio", req.student_audio_url);
+            const data = await fetchBlob(url);
+            setStudentBlob(data);
+          } catch {/* ignore */}
+        }
       }
 
       const resp = await getResponseForRequest(id);
@@ -180,7 +199,7 @@ export default function ReviewRequestPage({ params }: Props) {
       <div className="max-w-lg mx-auto space-y-5">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-2 gap-4">
           <div className="flex items-center gap-3">
             <Link
               href="/teacher"
@@ -190,14 +209,17 @@ export default function ReviewRequestPage({ params }: Props) {
             </Link>
             <h1 className="text-xl font-bold text-white">{t.title}</h1>
           </div>
-          <button
-            onClick={handleDeleteRequest}
-            disabled={submitting}
-            className="p-2 text-neutral-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors disabled:opacity-50"
-            title="Anfrage löschen"
-          >
-            <Trash2 size={20} />
-          </button>
+          <div className="flex items-center gap-2">
+            <ThemeSwitcher />
+            <button
+              onClick={handleDeleteRequest}
+              disabled={submitting}
+              className="p-2 text-neutral-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
+              title="Anfrage löschen"
+            >
+              <Trash2 size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Bereits beantwortet */}
