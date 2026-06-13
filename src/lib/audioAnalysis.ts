@@ -530,7 +530,7 @@ export async function analyzeAndCompareWithTTS(
   let durationFeedback = "";
   if (durationScore >= 80) {
     durationFeedback = "Sehr gutes Sprechtempo.";
-  } else if (studentFeatures.activeDurationMs > targetDurationMs) {
+  } else if (studentFeatures.activeDurationMs > maxTargetDuration) {
     durationFeedback = "Du hast das Wort etwas zu langsam oder gedehnt gesprochen.";
   } else {
     durationFeedback = "Du hast das Wort sehr schnell oder abgehackt gesprochen.";
