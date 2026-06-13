@@ -494,8 +494,8 @@ export async function analyzeAndCompareWithTTS(
     totalDiff += Math.abs(studentNormPitch[i] - teacherNormPitch[i]);
   }
   const mae = totalDiff / 50;
-  // Toleranz bei Synthese erhöhen (Faktor 4.5 statt 3.0), da künstliche Kurven starrer als echte Stimmen sind
-  const pitchScore = Math.max(0, Math.min(100, Math.round(100 * (1 - mae / 4.5))));
+  // Toleranz bei Synthese (Faktor 3.0), um falsche Töne zuverlässig als Fehler zu erkennen, während korrekte Töne bestehen
+  const pitchScore = Math.max(0, Math.min(100, Math.round(100 * (1 - mae / 3.0))));
 
   // B. Silbenlänge (Sprechdauer) - toleranter Bereich: 200ms bis 550ms pro Silbe
   const minTargetDuration = tones.length * 200;
