@@ -89,7 +89,9 @@ export function useAudioPlayer(): UseAudioPlayerResult {
       };
 
       audio.onerror = () => {
-        setError('Audio konnte nicht geladen werden.');
+        const errObj = audio.error;
+        console.error('HTMLAudioElement error:', errObj);
+        setError(`Audio konnte nicht geladen werden (Code: ${errObj?.code || 'unbekannt'}).`);
         setState('error');
       };
 
