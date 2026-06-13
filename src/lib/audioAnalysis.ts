@@ -159,15 +159,17 @@ function resample(track: number[], targetLength: number): number[] {
 /**
  * Normalisiert einen Pitch-Track mittels Z-Score (Mittelwert = 0, Standardabweichung = 1).
  * Dies eliminiert Unterschiede in der Stimmlage (z.B. hohe/tiefe Stimmen).
+ * minStdDev verhindert das extreme Verstärken von Rauschen bei flachen Tönen (z.B. Ton 1).
  */
-function normalizeZScore(track: number[]): number[] {
+function normalizeZScore(track: number[], minStdDev: number = 0): number[] {
   let sum = 0;
   for (const val of track) sum += val;
   const mean = sum / track.length;
 
   let varianceSum = 0;
   for (const val of track) varianceSum += (val - mean) * (val - mean);
-  const stdDev = Math.sqrt(varianceSum / track.length) || 1;
+  const stdDevRaw = Math.sqrt(varianceSum / track.length);
+  const stdDev = Math.max(stdDevRaw, minStdDev) || 1;
 
   return track.map((val) => (val - mean) / stdDev);
 }
@@ -232,7 +234,15 @@ function extractSpeechPitchTrack(audioBuffer: AudioBuffer): {
   // Resampeln auf feste Länge (50 Bins)
   const normalizedLengthTrack = resample(smoothedSegment, 50);
 
-  const silenceRatio = 1.0 - (activeFramesCount / rawPitches.length);
+  // Berechne die Stille-Quote ausschließlich innerhalb des aktiven Sprechsegments (also ohne Randstille)
+  let activeSilenceCount = 0;
+  for (let i = firstSpeechIndex; i <= lastSpeechIndex; i++) {
+    if (rawPitches[i] === 0) {
+      activeSilenceCount++;
+    }
+  }
+  const activeSegmentLength = lastSpeechIndex - firstSpeechIndex + 1;
+  const silenceRatio = activeSegmentLength > 0 ? (activeSilenceCount / activeSegmentLength) : 0;
 
   return {
     pitchTrack: normalizedLengthTrack,
@@ -276,9 +286,10 @@ export async function analyzeAndCompare(
     throw new Error("Es konnte keine Sprache im Schüler-Audio erkannt werden. Bitte lauter sprechen!");
   }
 
-  // 3. Pitch Z-Score normalisieren
-  const studentNormPitch = normalizeZScore(studentFeatures.pitchTrack);
-  const teacherNormPitch = normalizeZScore(teacherFeatures.pitchTrack);
+  // 3. Pitch Z-Score normalisieren. Wir limitieren minStdDev auf 15.0 Hz,
+  // um Rauschen bei sehr flachen Tonlagen nicht künstlich aufzublähen.
+  const studentNormPitch = normalizeZScore(studentFeatures.pitchTrack, 15.0);
+  const teacherNormPitch = normalizeZScore(teacherFeatures.pitchTrack, 15.0);
 
   // 4. Scores berechnen
 
@@ -290,8 +301,8 @@ export async function analyzeAndCompare(
   }
   const mae = totalDiff / 50;
   
-  // MAE auf 0 - 100 mappen (Abweichung von 2.0 gilt als 0% Score)
-  const pitchScore = Math.max(0, Math.min(100, Math.round(100 * (1 - mae / 2.0))));
+  // MAE auf 0 - 100 mappen (Abweichung von 2.5 gilt als 0% Score)
+  const pitchScore = Math.max(0, Math.min(100, Math.round(100 * (1 - mae / 2.5))));
 
   // B. Silbenlänge (Duration Similarity)
   const durationRatio = Math.min(studentFeatures.activeDurationMs, teacherFeatures.activeDurationMs) /
@@ -470,9 +481,11 @@ export async function analyzeAndCompareWithTTS(
   // Mit gleitendem Durchschnitt glätten, um Kanten abzurunden und Übergänge natürlicher zu machen
   const syntheticPitch = smoothMovingAverage(rawSyntheticPitch, 7);
 
-  // 4. Normalisieren
-  const studentNormPitch = normalizeZScore(studentFeatures.pitchTrack);
-  const teacherNormPitch = normalizeZScore(syntheticPitch);
+  // 4. Normalisieren.
+  // Für die menschliche Stimme begrenzen wir minStdDev auf 15.0 Hz.
+  // Für die synthetische Kurve begrenzen wir minStdDev auf 0.15 (dimensionslos).
+  const studentNormPitch = normalizeZScore(studentFeatures.pitchTrack, 15.0);
+  const teacherNormPitch = normalizeZScore(syntheticPitch, 0.15);
 
   // 5. Scores berechnen
   // A. Tonverlauf (Pitch-Abweichung)
@@ -481,21 +494,28 @@ export async function analyzeAndCompareWithTTS(
     totalDiff += Math.abs(studentNormPitch[i] - teacherNormPitch[i]);
   }
   const mae = totalDiff / 50;
-  // Toleranz bei Synthese erhöhen (Faktor 3.0 statt 1.5), da künstliche Kurven starrer als echte Stimmen sind
-  const pitchScore = Math.max(0, Math.min(100, Math.round(100 * (1 - mae / 3.0))));
+  // Toleranz bei Synthese erhöhen (Faktor 4.5 statt 3.0), da künstliche Kurven starrer als echte Stimmen sind
+  const pitchScore = Math.max(0, Math.min(100, Math.round(100 * (1 - mae / 4.5))));
 
-  // B. Silbenlänge (Vergleich mit einer Zielzeit von ca. 350ms pro Silbe)
-  const targetDurationMs = tones.length * 350;
-  const durationRatio = Math.min(studentFeatures.activeDurationMs, targetDurationMs) /
-                        Math.max(studentFeatures.activeDurationMs, targetDurationMs);
-  const durationScore = Math.round(durationRatio * 100);
+  // B. Silbenlänge (Sprechdauer) - toleranter Bereich: 200ms bis 550ms pro Silbe
+  const minTargetDuration = tones.length * 200;
+  const maxTargetDuration = tones.length * 550;
+  const actualDuration = studentFeatures.activeDurationMs;
+  let durationScore = 100;
+  
+  if (actualDuration < minTargetDuration) {
+    durationScore = Math.round((actualDuration / minTargetDuration) * 100);
+  } else if (actualDuration > maxTargetDuration) {
+    durationScore = Math.round((maxTargetDuration / actualDuration) * 100);
+  }
+  durationScore = Math.max(50, durationScore); // Mindestpunktzahl 50, solange gesprochen wurde
 
-  // C. Rhythmus / Pause (Vergleich mit einer Zielpausenquote von 10%)
+  // C. Rhythmus / Pause (Vergleich mit einer Zielpausenquote von 10% innerhalb des Sprechsegments)
   const rhythmDiff = Math.abs(studentFeatures.silenceRatio - 0.1);
   const rhythmScore = Math.max(0, Math.round(100 * (1 - rhythmDiff * 1.5)));
 
-  // D. Gesamtbewertung
-  const score = Math.round(pitchScore * 0.7 + durationScore * 0.15 + rhythmScore * 0.15);
+  // D. Gesamtbewertung (Chinesischer Tonverlauf hat höchste Priorität bei Synthese: 80%)
+  const score = Math.round(pitchScore * 0.8 + durationScore * 0.10 + rhythmScore * 0.10);
 
   // 6. Feedback generieren
   let pitchFeedback = "";
