@@ -9,7 +9,7 @@ import { analyzeAndCompare, analyzeAndCompareWithTTS, AnalysisResult } from "@/l
 interface ToneAnalyserProps {
   vocabId: string;
   recordingTrigger?: number;
-  onAnalysisComplete?: (score: number) => void;
+  onAnalysisComplete?: (score: number, pitchScore: number) => void;
 }
 
 export function ToneAnalyser({ vocabId, recordingTrigger, onAnalysisComplete }: ToneAnalyserProps) {
@@ -168,7 +168,7 @@ export function ToneAnalyser({ vocabId, recordingTrigger, onAnalysisComplete }: 
       setResult(analysisResult);
       
       if (onAnalysisComplete) {
-        onAnalysisComplete(analysisResult.score);
+        onAnalysisComplete(analysisResult.score, analysisResult.pitchScore);
       }
     } catch (err) {
       console.error(err);

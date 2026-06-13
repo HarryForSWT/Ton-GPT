@@ -466,10 +466,10 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
                 <ToneAnalyser
                   vocabId={vocab.id}
                   recordingTrigger={recordingTrigger}
-                  onAnalysisComplete={async (score) => {
+                  onAnalysisComplete={async (score, pitchScore) => {
                     try {
                       const maxScore = Math.max(vocab.bestScore || 0, score);
-                      const isLearned = maxScore >= 67;
+                      const isLearned = pitchScore >= 67;
                       
                       const updatedVocab: Vocabulary = {
                         ...vocab,
