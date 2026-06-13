@@ -56,7 +56,7 @@ export function useAudioPlayer(): UseAudioPlayerResult {
     }
   }, []);
 
-  const load = useCallback((blob: Blob) => {
+  const load = useCallback((blob: Blob, mimeType?: string) => {
     cleanUp();
     setError(null);
     setState('loading');
@@ -64,7 +64,15 @@ export function useAudioPlayer(): UseAudioPlayerResult {
     setDurationMs(0);
 
     try {
-      const url = URL.createObjectURL(blob);
+      console.log('Audio blob loaded:', blob.size, 'bytes, type:', blob.type, 'fallback mimeType:', mimeType);
+      
+      // Falls der Blob aus der Datenbank einen falschen oder leeren Typ hat, erzwingen wir ein Audio-Format
+      let finalBlob = blob;
+      if (!blob.type || blob.type === 'application/octet-stream' || blob.type === 'application/x-www-form-urlencoded') {
+        finalBlob = new Blob([blob], { type: mimeType || 'audio/webm' });
+      }
+
+      const url = URL.createObjectURL(finalBlob);
       objectUrlRef.current = url;
 
       const audio = new Audio();
