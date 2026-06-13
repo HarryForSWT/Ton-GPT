@@ -85,9 +85,9 @@ export function useAudioRecorder(): UseAudioRecorderResult {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 44100,
+          echoCancellation: false,
+          noiseSuppression: false,
+          autoGainControl: false,
         },
       });
 
@@ -115,8 +115,9 @@ export function useAudioRecorder(): UseAudioRecorderResult {
           timerRef.current = null;
         }
 
-        if (blob.size === 0) {
-          setError('Aufnahme ist leer (0 bytes). Bitte überprüfe deine Mikrofon-Einstellungen oder System-Berechtigungen.');
+        // Ein reiner WebM Header hat ca. 70-150 Bytes. Alles unter 500 Bytes enthält definitiv kein Audio.
+        if (blob.size < 500) {
+          setError('Aufnahme fehlgeschlagen (Hardware-Treiber blockiert Ton). Bitte überprüfe dein Windows-Mikrofon.');
           setState('error');
           setAudioBlob(null);
         } else {
