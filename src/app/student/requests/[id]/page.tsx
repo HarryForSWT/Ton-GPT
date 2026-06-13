@@ -3,7 +3,7 @@
 import React, { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Clock, CheckCircle2, MessageSquare, Mic2 } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, MessageSquare, Mic2, Trash2 } from "lucide-react";
 import { de } from "@/locales/de";
 import {
   getRequestById,
@@ -29,7 +29,11 @@ async function fetchBlob(url: string): Promise<{ blob: Blob; mimeType: string } 
     if (blob.type.includes("json") || blob.type.includes("html") || blob.type.includes("text")) {
       return null;
     }
-    return { blob, mimeType: blob.type || "audio/webm" };
+    let finalMime = blob.type || "audio/webm";
+    if (finalMime.includes("octet-stream") || finalMime.includes("x-www-form-urlencoded")) {
+      finalMime = "audio/webm";
+    }
+    return { blob, mimeType: finalMime };
   } catch {
     return null;
   }
@@ -92,6 +96,20 @@ export default function RequestDetailPage({ params }: Props) {
     }
   };
 
+  const handleDeleteRequest = async () => {
+    if (!request) return;
+    if (confirm("Möchtest du diese Anfrage wirklich endgültig löschen?")) {
+      setSavingRef(true);
+      try {
+        await deletePronunciationRequest(request.id, request.student_audio_url, response?.audio_url || null);
+        router.push("/student/requests");
+      } catch (err) {
+        console.error("Fehler beim Löschen der Anfrage:", err);
+        setSavingRef(false);
+      }
+    }
+  };
+
   useEffect(() => {
     async function load() {
       const req = await getRequestById(id);
@@ -149,14 +167,24 @@ export default function RequestDetailPage({ params }: Props) {
       <div className="max-w-lg mx-auto space-y-5">
 
         {/* Header */}
-        <div className="flex items-center gap-3 mb-2">
-          <Link
-            href="/student/requests"
-            className="p-2 hover:bg-neutral-800 rounded-xl transition-colors text-neutral-400 hover:text-white"
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-3">
+            <Link
+              href="/student/requests"
+              className="p-2 hover:bg-neutral-800 rounded-xl transition-colors text-neutral-400 hover:text-white"
+            >
+              <ArrowLeft size={20} />
+            </Link>
+            <h1 className="text-xl font-bold text-white">{t.detailTitle}</h1>
+          </div>
+          <button
+            onClick={handleDeleteRequest}
+            disabled={savingRef}
+            className="p-2 text-neutral-500 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-colors disabled:opacity-50"
+            title="Anfrage löschen"
           >
-            <ArrowLeft size={20} />
-          </Link>
-          <h1 className="text-xl font-bold text-white">{t.detailTitle}</h1>
+            <Trash2 size={20} />
+          </button>
         </div>
 
         {/* Wort-Karte */}

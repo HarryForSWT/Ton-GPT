@@ -113,6 +113,21 @@ export async function deleteVocab(id: string): Promise<void> {
   await db.delete('vocabulary', id);
 }
 
+/**
+ * Löscht eine Vokabel und alle dazugehörigen Audio-Dateien restlos aus IndexedDB.
+ */
+export async function deleteVocabWithAudio(vocabId: string): Promise<void> {
+  const db = await getDB();
+  if (!db) throw new Error('IndexedDB not available');
+
+  const audios = await db.getAllFromIndex('audioRecordings', 'by-vocabId', vocabId);
+  for (const audio of audios) {
+    await db.delete('audioRecordings', audio.id);
+  }
+
+  await db.delete('vocabulary', vocabId);
+}
+
 export async function toggleLearned(id: string): Promise<Vocabulary> {
   const db = await getDB();
   if (!db) throw new Error('IndexedDB not available');

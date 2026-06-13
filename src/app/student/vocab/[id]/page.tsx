@@ -4,7 +4,7 @@ import React, { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Edit2, Trash2, CheckCircle2, Circle, Save, X, Calendar, Info } from "lucide-react";
-import { getVocabById, updateVocab, deleteVocab, Vocabulary, trackPractice } from "@/lib/db";
+import { getVocabById, updateVocab, deleteVocabWithAudio, Vocabulary, trackPractice } from "@/lib/db";
 import { de } from "@/locales/de";
 import { Button } from "@/components/ui/Button";
 import { AudioControls } from "@/components/audio/AudioControls";
@@ -54,7 +54,7 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
     if (!vocab) return;
     if (confirm(de.vocabDetail.deleteConfirm)) {
       try {
-        await deleteVocab(vocab.id);
+        await deleteVocabWithAudio(vocab.id);
         router.push("/student/vocab");
       } catch (err) {
         console.error("Error deleting vocabulary", err);
