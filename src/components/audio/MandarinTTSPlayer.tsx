@@ -90,8 +90,8 @@ export function MandarinTTSPlayer({ text, pinyin, className = "" }: MandarinTTSP
       utterance.lang = "zh-CN";
     }
 
-    // Slow down speed slightly for clear educational listening
-    utterance.rate = 0.8;
+    // Slow down speed for clear educational listening
+    utterance.rate = 0.6;
 
     utterance.onstart = () => setIsPlaying(true);
     utterance.onend = () => setIsPlaying(false);

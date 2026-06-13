@@ -8,10 +8,11 @@ import { analyzeAndCompare, analyzeAndCompareWithTTS, AnalysisResult } from "@/l
 
 interface ToneAnalyserProps {
   vocabId: string;
+  recordingTrigger?: number;
   onAnalysisComplete?: (score: number) => void;
 }
 
-export function ToneAnalyser({ vocabId, onAnalysisComplete }: ToneAnalyserProps) {
+export function ToneAnalyser({ vocabId, recordingTrigger, onAnalysisComplete }: ToneAnalyserProps) {
   const t = de.toneAnalyser;
 
   const [studentRecording, setStudentRecording] = useState<AudioRecording | null>(null);
@@ -52,7 +53,7 @@ export function ToneAnalyser({ vocabId, onAnalysisComplete }: ToneAnalyserProps)
 
   useEffect(() => {
     loadRecordings();
-  }, [loadRecordings]);
+  }, [loadRecordings, recordingTrigger]);
 
   // Diagramm zeichnen
   useEffect(() => {

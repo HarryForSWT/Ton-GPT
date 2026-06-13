@@ -14,9 +14,11 @@ interface AudioControlsProps {
   role: "student" | "teacher";
   /** Optional label shown at the top of the section */
   label?: string;
+  /** Callback triggered when a new recording is successfully saved */
+  onRecordingSaved?: () => void;
 }
 
-export function AudioControls({ vocabId, role, label }: AudioControlsProps) {
+export function AudioControls({ vocabId, role, label, onRecordingSaved }: AudioControlsProps) {
   const t = de.audio;
   const [savedRecordings, setSavedRecordings] = useState<AudioRecording[]>([]);
   const [mounted, setMounted] = useState(false);
@@ -56,13 +58,16 @@ export function AudioControls({ vocabId, role, label }: AudioControlsProps) {
       }
 
       setSavedMsg(true);
+      if (onRecordingSaved) {
+        onRecordingSaved();
+      }
       setTimeout(() => setSavedMsg(false), 2500);
     } catch (err) {
       console.error("Failed to save recording:", err);
     } finally {
       setSaving(false);
     }
-  }, [vocabId, role]);
+  }, [vocabId, role, onRecordingSaved]);
 
   const handleDelete = useCallback(async (id: string) => {
     if (!confirm(t.deleteConfirm)) return;

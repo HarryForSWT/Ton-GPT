@@ -23,6 +23,7 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [practiceSuccess, setPracticeSuccess] = useState(false);
+  const [recordingTrigger, setRecordingTrigger] = useState(0);
 
   // Edit form state
   const [form, setForm] = useState({
@@ -424,6 +425,7 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
                   vocabId={vocab.id}
                   role="student"
                   label={td.myRecordingLabel}
+                  onRecordingSaved={() => setRecordingTrigger(prev => prev + 1)}
                 />
               </div>
 
@@ -431,6 +433,7 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
               <div className="border-t border-neutral-800/80 pt-4">
                 <ToneAnalyser
                   vocabId={vocab.id}
+                  recordingTrigger={recordingTrigger}
                   onAnalysisComplete={async (score) => {
                     try {
                       const maxScore = Math.max(vocab.bestScore || 0, score);

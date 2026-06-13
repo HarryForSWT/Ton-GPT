@@ -3,7 +3,7 @@
 import React, { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Clock, CheckCircle2, MessageSquare, Mic2, Trash2 } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, MessageSquare, Mic2, Trash2, Play } from "lucide-react";
 import { de } from "@/locales/de";
 import {
   getRequestById,
@@ -64,6 +64,7 @@ export default function RequestDetailPage({ params }: Props) {
   const [loading, setLoading] = useState(true);
   const [savingRef, setSavingRef] = useState(false);
   const [refSavedMsg, setRefSavedMsg] = useState("");
+  const [localVocabId, setLocalVocabId] = useState<string | null>(null);
 
   const handleSaveAsReference = async () => {
     if (!request || !teacherBlob) return;
@@ -134,12 +135,57 @@ export default function RequestDetailPage({ params }: Props) {
     }
   };
 
+  const handleGoToPreAnalysis = async () => {
+    if (!request) return;
+    setSavingRef(true);
+    try {
+      let targetId = localVocabId;
+      if (!targetId) {
+        const { addVocab } = await import("@/lib/db");
+        targetId = await addVocab({
+          hanzi: request.hanzi.trim(),
+          pinyin: request.pinyin.trim(),
+          pinyinNumber: request.pinyin_number?.trim() || request.pinyin.trim(),
+          germanMeaning: request.german_meaning?.trim() || "",
+        });
+      }
+
+      // Falls der Schüler bereits ein Audio gesendet hat, dieses lokal kopieren
+      if (studentBlob) {
+        const { saveAudioRecording } = await import("@/lib/db");
+        await saveAudioRecording({
+          vocabId: targetId,
+          role: "student",
+          blob: studentBlob.blob,
+          mimeType: studentBlob.mimeType,
+          durationMs: 0,
+        });
+      }
+
+      router.push(`/student/vocab/${targetId}`);
+    } catch (err) {
+      console.error("Fehler beim Wechsel zur Voranalyse:", err);
+      setSavingRef(false);
+    }
+  };
+
   useEffect(() => {
     async function load() {
       const req = await getRequestById(id);
       setRequest(req);
 
       if (req) {
+        // Prüfen, ob das Wort bereits lokal in den Vokabeln existiert
+        try {
+          const { getVocabList } = await import("@/lib/db");
+          const list = await getVocabList();
+          const matched = list.find(v => v.hanzi.trim() === req.hanzi.trim());
+          if (matched) {
+            setLocalVocabId(matched.id);
+          }
+        } catch (err) {
+          console.error("Fehler beim Suchen nach lokalen Vokabeln:", err);
+        }
         // Schüler-Audio laden
         if (req.student_audio_url) {
           try {
@@ -273,6 +319,24 @@ export default function RequestDetailPage({ params }: Props) {
                 </div>
                 <p className="text-neutral-500 text-sm max-w-xs">{t.noFeedbackYet}</p>
               </div>
+
+              {/* Voranalyse-Navigation: Nur einblenden, wenn der Schüler selbst ein Audio gesendet hat */}
+              {request.student_audio_url && (
+                <div className="bg-neutral-900 border border-neutral-800/80 rounded-2xl p-4 flex flex-col gap-2.5">
+                  <p className="text-xs text-neutral-400 leading-normal">
+                    Möchtest du deine Aussprache vorab analysieren und mit den Standardtönen vergleichen, während du auf den Lehrer wartest?
+                  </p>
+                  <button
+                    onClick={handleGoToPreAnalysis}
+                    disabled={savingRef}
+                    className="w-full flex items-center justify-center gap-2 py-3 bg-amber-500/10 hover:bg-amber-500/20 active:scale-95 border border-amber-500/20 text-amber-400 font-bold text-xs rounded-xl transition-all disabled:opacity-50"
+                  >
+                    <Play size={12} className="fill-amber-400 text-amber-400 animate-pulse" />
+                    {localVocabId ? "Zur Voranalyse (Ton-Vergleich)" : "Lokal speichern & Voranalyse starten"}
+                  </button>
+                </div>
+              )}
+
               <div className="border-t border-neutral-800 pt-4 space-y-2">
                 <p className="text-xs text-neutral-500 font-semibold uppercase tracking-wider">Aussprache-Hilfe (Automatisch)</p>
                 <MandarinTTSPlayer text={request.hanzi} pinyin={request.pinyin} />
