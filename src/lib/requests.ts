@@ -195,3 +195,31 @@ export async function submitTeacherResponse(data: {
 
   if (updateError) throw new Error(`Status konnte nicht aktualisiert werden: ${updateError.message}`);
 }
+
+/**
+ * Schüler: Anfrage und dazugehörige Audios löschen (nach erfolgreichem lokalen Speichern).
+ */
+export async function deletePronunciationRequest(requestId: string, studentAudioUrl: string | null, teacherAudioUrl: string | null): Promise<void> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error('Nicht eingeloggt');
+
+  // 1. Audio Dateien löschen falls vorhanden
+  if (studentAudioUrl) {
+    const { error } = await supabase.storage.from('student-audio').remove([studentAudioUrl]);
+    if (error) console.error("Fehler beim Löschen des Schüler-Audios:", error.message);
+  }
+  
+  if (teacherAudioUrl) {
+    const { error } = await supabase.storage.from('teacher-audio').remove([teacherAudioUrl]);
+    if (error) console.error("Fehler beim Löschen des Lehrer-Audios:", error.message);
+  }
+
+  // 2. Datenbankeintrag löschen (Lehrer-Antwort wird durch CASCADE mitgelöscht)
+  const { error: dbError } = await supabase
+    .from('pronunciation_requests')
+    .delete()
+    .eq('id', requestId);
+
+  if (dbError) throw new Error(`Anfrage konnte nicht gelöscht werden: ${dbError.message}`);
+}

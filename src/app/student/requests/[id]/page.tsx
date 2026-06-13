@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, use } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Clock, CheckCircle2, MessageSquare, Mic2 } from "lucide-react";
 import { de } from "@/locales/de";
@@ -8,6 +9,7 @@ import {
   getRequestById,
   getResponseForRequest,
   getSignedAudioUrl,
+  deletePronunciationRequest,
   PronunciationRequest,
   TeacherResponse,
 } from "@/lib/requests";
@@ -34,6 +36,7 @@ async function fetchBlob(url: string): Promise<{ blob: Blob; mimeType: string } 
 }
 
 export default function RequestDetailPage({ params }: Props) {
+  const router = useRouter();
   const { id } = use(params);
   const t = de.requests;
 
@@ -74,8 +77,14 @@ export default function RequestDetailPage({ params }: Props) {
         durationMs: response?.audio_duration ? response.audio_duration * 1000 : 0,
       });
 
+      // Nach lokalem Speichern: Cloud-Daten löschen (Local-First)
+      await deletePronunciationRequest(request.id, request.student_audio_url, response?.audio_url || null);
+
       setRefSavedMsg(de.toneAnalyser.saveReferenceSuccess);
-      setTimeout(() => setRefSavedMsg(""), 3000);
+      setTimeout(() => {
+        setRefSavedMsg("");
+        router.push("/student/requests");
+      }, 1500);
     } catch (err) {
       console.error("Fehler beim Speichern der Referenz:", err);
     } finally {
