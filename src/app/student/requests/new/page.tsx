@@ -43,8 +43,24 @@ export default function NewRequestPage() {
   const pinyinRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    getVocabList().then(setVocabList);
+    getVocabList().then((list) => {
+      setVocabList(list);
+
+      // Check if vocabId is passed in URL query parameters
+      const params = new URLSearchParams(window.location.search);
+      const vocabIdParam = params.get("vocabId");
+      if (vocabIdParam && list.length > 0) {
+        const matched = list.find((x) => x.id === vocabIdParam);
+        if (matched) {
+          setSelectedVocabId(vocabIdParam);
+          setManualHanzi(matched.hanzi);
+          setManualPinyin(matched.pinyin || matched.pinyinNumber);
+          setManualMeaning(matched.germanMeaning);
+        }
+      }
+    });
   }, []);
+
 
   // Wenn eine Vokabel aus der Liste gewählt wird, Felder befüllen
   const handleVocabSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {

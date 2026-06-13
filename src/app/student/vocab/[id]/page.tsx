@@ -373,6 +373,28 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
                   </button>
                 </div>
 
+                {/* Aussprache-Feedback anfragen */}
+                <div className="border-t border-neutral-850 pt-3 flex items-center justify-between">
+                  <div>
+                    <span className="text-xs font-bold text-neutral-500 uppercase tracking-wider block">
+                      Lehrer-Feedback
+                    </span>
+                    <span className="text-xs text-neutral-400 mt-0.5 block">
+                      Aussprache vom Lehrer bewerten lassen
+                    </span>
+                  </div>
+                  <Link
+                    href={`/student/requests/new?vocabId=${vocab.id}`}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 active:scale-95 border border-emerald-500/20 text-emerald-400 rounded-xl text-sm font-bold transition-all"
+                  >
+                    <svg className="w-4 h-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                      <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+                    </svg>
+                    Anfragen
+                  </Link>
+                </div>
+
+
                 {/* Erklärung zur Aktivität */}
                 <div className="border-t border-neutral-850 pt-3.5 flex items-start gap-2 text-[10px] text-neutral-500 leading-normal">
                   <Info size={12} className="shrink-0 mt-0.5 text-neutral-600" />
