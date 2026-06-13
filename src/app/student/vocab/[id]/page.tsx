@@ -441,6 +441,16 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
                 </div>
               </div>
 
+              {/* Lehrer-Aussprache (Referenz) */}
+              <div className="border-t border-neutral-800/80 pt-4">
+                <AudioControls
+                  vocabId={vocab.id}
+                  role="teacher"
+                  label={td.teacherAudioLabel}
+                  hideRecorder={true}
+                />
+              </div>
+
               {/* Audio Recording Section */}
               <div className="border-t border-neutral-800/80 pt-4">
                 <AudioControls

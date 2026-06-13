@@ -16,9 +16,11 @@ interface AudioControlsProps {
   label?: string;
   /** Callback triggered when a new recording is successfully saved */
   onRecordingSaved?: () => void;
+  /** If true, the recording button (recorder) is hidden */
+  hideRecorder?: boolean;
 }
 
-export function AudioControls({ vocabId, role, label, onRecordingSaved }: AudioControlsProps) {
+export function AudioControls({ vocabId, role, label, onRecordingSaved, hideRecorder = false }: AudioControlsProps) {
   const t = de.audio;
   const [savedRecordings, setSavedRecordings] = useState<AudioRecording[]>([]);
   const [mounted, setMounted] = useState(false);
@@ -88,7 +90,9 @@ export function AudioControls({ vocabId, role, label, onRecordingSaved }: AudioC
       )}
 
       {/* Recorder */}
-      <AudioRecorder onRecordingComplete={handleRecordingComplete} />
+      {!hideRecorder && (
+        <AudioRecorder onRecordingComplete={handleRecordingComplete} />
+      )}
 
       {/* Save feedback */}
       {saving && (
@@ -101,7 +105,7 @@ export function AudioControls({ vocabId, role, label, onRecordingSaved }: AudioC
       )}
 
       {/* Saved recordings list */}
-      {savedRecordings.length > 0 && (
+      {savedRecordings.length > 0 ? (
         <div className="space-y-3">
           <p className="text-xs font-semibold text-neutral-500 uppercase tracking-wider">
             Gespeicherte Aufnahmen ({savedRecordings.length})
@@ -127,6 +131,12 @@ export function AudioControls({ vocabId, role, label, onRecordingSaved }: AudioC
             </div>
           ))}
         </div>
+      ) : (
+        hideRecorder && (
+          <p className="text-xs text-neutral-500 text-center py-2.5 italic">
+            Keine Referenzaufnahme vorhanden
+          </p>
+        )
       )}
     </div>
   );
