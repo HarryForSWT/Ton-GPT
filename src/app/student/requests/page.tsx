@@ -22,10 +22,20 @@ export default function MyRequestsPage() {
   const t = de.requests;
 
   const [requests, setRequests] = useState<PronunciationRequest[]>([]);
+  const [readIds, setReadIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    try {
+      const cookies = document.cookie.split("; ");
+      const readCookie = cookies.find(row => row.startsWith("read_requests="));
+      const ids = readCookie ? readCookie.split("=")[1].split(",").filter(Boolean) : [];
+      setReadIds(ids);
+    } catch (e) {
+      console.error(e);
+    }
+
     getMyRequests()
       .then(setRequests)
       .catch((err) => setError(err.message))
@@ -104,52 +114,71 @@ export default function MyRequestsPage() {
         {/* Anfragen-Liste */}
         {!loading && requests.length > 0 && (
           <div className="space-y-3">
-            {requests.map((req) => (
-              <Link
-                key={req.id}
-                href={`/student/requests/${req.id}`}
-                className="block"
-              >
-                <div className="p-4 bg-neutral-900 border border-neutral-800 hover:border-emerald-500/50 rounded-2xl transition-all duration-200 group">
-                  <div className="flex items-center justify-between gap-4">
+            {requests.map((req) => {
+              const isUnreadReviewed = req.status === "reviewed" && !readIds.includes(req.id);
+              return (
+                <Link
+                  key={req.id}
+                  href={`/student/requests/${req.id}`}
+                  className="block"
+                >
+                  <div className={`p-4 rounded-2xl transition-all duration-200 group border relative ${
+                    isUnreadReviewed
+                      ? "bg-emerald-500/5 border-emerald-500 hover:bg-emerald-500/10 shadow-lg shadow-emerald-500/5"
+                      : "bg-neutral-900 border-neutral-800 hover:border-emerald-500/50"
+                  }`}>
+                    {/* Pulsierendes "Neu" Badge für ungelesene Antworten */}
+                    {isUnreadReviewed && (
+                      <span className="absolute -top-1.5 -left-1.5 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                      </span>
+                    )}
 
-                    {/* Linke Seite: Wort */}
-                    <div className="flex items-center gap-4 min-w-0">
-                      <div className="w-12 h-12 rounded-xl bg-neutral-800 flex items-center justify-center shrink-0">
-                        <span className="text-xl font-bold text-white">{req.hanzi.charAt(0)}</span>
+                    <div className="flex items-center justify-between gap-4">
+
+                      {/* Linke Seite: Wort */}
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="w-12 h-12 rounded-xl bg-neutral-800 flex items-center justify-center shrink-0">
+                          <span className="text-xl font-bold text-white">{req.hanzi.charAt(0)}</span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-lg font-bold text-white truncate">{req.hanzi}</p>
+                          {req.pinyin && (
+                            <p className="text-emerald-400 text-sm font-mono truncate">{req.pinyin}</p>
+                          )}
+                          {req.german_meaning && (
+                            <p className="text-neutral-500 text-xs truncate">{req.german_meaning}</p>
+                          )}
+                        </div>
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-lg font-bold text-white truncate">{req.hanzi}</p>
-                        {req.pinyin && (
-                          <p className="text-emerald-400 text-sm font-mono truncate">{req.pinyin}</p>
+
+                      {/* Rechte Seite: Status + Zeit */}
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        {req.status === "reviewed" ? (
+                          <span className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
+                            isUnreadReviewed
+                              ? "bg-emerald-500 text-white animate-pulse"
+                              : "bg-emerald-500/15 text-emerald-400 border border-emerald-500/25"
+                          }`}>
+                            <CheckCircle2 size={12} />
+                            {isUnreadReviewed ? "Neu geantwortet" : t.statusReviewed}
+                          </span>
+                        ) : (
+                          <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/15 text-amber-400 border border-amber-500/25 rounded-full text-xs font-bold">
+                            <Clock size={12} />
+                            {t.statusPending}
+                          </span>
                         )}
-                        {req.german_meaning && (
-                          <p className="text-neutral-500 text-xs truncate">{req.german_meaning}</p>
-                        )}
+                        <span className="text-xs text-neutral-600">{timeAgo(req.created_at)}</span>
                       </div>
-                    </div>
 
-                    {/* Rechte Seite: Status + Zeit */}
-                    <div className="flex flex-col items-end gap-2 shrink-0">
-                      {req.status === "reviewed" ? (
-                        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/15 text-emerald-400 border border-emerald-500/25 rounded-full text-xs font-bold">
-                          <CheckCircle2 size={12} />
-                          {t.statusReviewed}
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-500/15 text-amber-400 border border-amber-500/25 rounded-full text-xs font-bold">
-                          <Clock size={12} />
-                          {t.statusPending}
-                        </span>
-                      )}
-                      <span className="text-xs text-neutral-600">{timeAgo(req.created_at)}</span>
+                      <ChevronRight size={16} className="text-neutral-700 group-hover:text-neutral-400 transition-colors shrink-0" />
                     </div>
-
-                    <ChevronRight size={16} className="text-neutral-700 group-hover:text-neutral-400 transition-colors shrink-0" />
                   </div>
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </div>
         )}
       </div>

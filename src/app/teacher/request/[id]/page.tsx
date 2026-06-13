@@ -85,7 +85,7 @@ export default function ReviewRequestPage({ params }: Props) {
       const req = await getRequestById(id);
       setRequest(req);
 
-      if (req?.student_audio_url) {
+      if (req?.student_audio_url && req.student_audio_url !== "no-audio") {
         try {
           const url = await getSignedAudioUrl("student-audio", req.student_audio_url);
           const data = await fetchBlob(url);

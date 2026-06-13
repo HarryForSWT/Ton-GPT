@@ -23,6 +23,22 @@ body {
 .light {
   --background: #f9fafb;
   --foreground: #111827;
+
+  /* Tailwind Farb-Variablen umbiegen */
+  --color-neutral-950: #f9fafb;
+  --color-neutral-900: #ffffff;
+  --color-neutral-850: #f3f4f6;
+  --color-neutral-800: #e5e7eb;
+  --color-neutral-700: #d1d5db;
+  --color-neutral-600: #4b5563;
+  --color-neutral-500: #6b7280;
+  --color-neutral-400: #374151;
+  --color-neutral-300: #1f2937;
+  --color-neutral-200: #111827;
+  --color-neutral-100: #0a0a0a;
+
+  /* Weißer Text wird standardmäßig dunkel */
+  --color-white: #0a0a0a;
 }
 
 .light body {
@@ -30,142 +46,44 @@ body {
   color: #111827 !important;
 }
 
-/* Hintergrundfarben */
-.light .bg-neutral-950 {
-  background-color: #f9fafb !important;
-}
-
-.light .bg-neutral-900 {
-  background-color: #ffffff !important;
-  border-color: #e5e7eb !important;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
-}
-
+/* Spezifische Schatten und Rahmen für hellen Modus */
+.light .bg-neutral-900,
 .light .bg-neutral-900\/60 {
-  background-color: rgba(255, 255, 255, 0.9) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03) !important;
   border-color: #e5e7eb !important;
 }
 
-.light .bg-neutral-950\/40 {
-  background-color: rgba(243, 244, 246, 0.6) !important;
-  border-color: #e5e7eb !important;
-}
-
-.light .bg-neutral-950\/20 {
-  background-color: rgba(243, 244, 246, 0.4) !important;
-  border-color: #e5e7eb !important;
-}
-
-.light .bg-neutral-950\/80 {
-  background-color: rgba(243, 244, 246, 0.8) !important;
-  border-color: #e5e7eb !important;
-}
-
-.light .bg-neutral-800 {
-  background-color: #f3f4f6 !important;
-  border-color: #e5e7eb !important;
-}
-
-.light .bg-neutral-800\/60 {
-  background-color: rgba(243, 244, 246, 0.6) !important;
-}
-
-.light .bg-neutral-850\/30 {
-  background-color: rgba(243, 244, 246, 0.3) !important;
-}
-
-.light .hover\:bg-neutral-800:hover {
-  background-color: #f3f4f6 !important;
-}
-
-.light .hover\:bg-neutral-700:hover {
-  background-color: #e5e7eb !important;
-}
-
-/* Ränder */
-.light .border-neutral-800 {
-  border-color: #e5e7eb !important;
-}
-
-.light .border-neutral-800\/80 {
-  border-color: rgba(229, 231, 235, 0.8) !important;
-}
-
-.light .border-neutral-850 {
-  border-color: #e5e7eb !important;
-}
-
-.light .border-neutral-850\/80 {
-  border-color: rgba(229, 231, 235, 0.8) !important;
-}
-
-.light .border-neutral-700 {
-  border-color: #d1d5db !important;
-}
-
-.light .border-neutral-700\/60 {
-  border-color: rgba(209, 213, 219, 0.6) !important;
-}
-
-/* Textfarben (Ausnahme für farbige Buttons/Abzeichen) */
-.light .text-white:not(button):not(.btn):not([class*="bg-emerald"]):not([class*="bg-blue"]):not([class*="bg-teal"]):not([class*="bg-red"]):not(button *):not([class*="bg-amber"]) {
-  color: #111827 !important;
-}
-
-.light .text-neutral-100 {
-  color: #111827 !important;
-}
-
-.light .text-neutral-200 {
-  color: #1f2937 !important;
-}
-
-.light .text-neutral-300 {
-  color: #374151 !important;
-}
-
-.light .text-neutral-400 {
-  color: #4b5563 !important;
-}
-
-.light .text-neutral-500 {
-  color: #6b7280 !important;
-}
-
-.light .text-neutral-600 {
-  color: #9ca3af !important;
-}
-
-/* Fading Gradients */
+/* Fading Gradients anpassen */
 .light .from-white {
   --tw-gradient-from: #111827 !important;
   --tw-gradient-to: #4b5563 !important;
 }
 
-/* Form-Elemente */
-.light input[type="text"],
-.light select,
-.light textarea {
-  background-color: #ffffff !important;
-  color: #111827 !important;
-  border-color: #d1d5db !important;
+/* Erzwungener weißer Text auf farbigen Hintergründen (Buttons, Badges) */
+.light .bg-emerald-500,
+.light .bg-emerald-600,
+.light .bg-blue-500,
+.light .bg-blue-600,
+.light .bg-red-500,
+.light .bg-red-600,
+.light .bg-teal-500,
+.light .bg-teal-600,
+.light .bg-amber-500,
+.light .bg-amber-600 {
+  color: #ffffff !important;
 }
 
-.light input::placeholder {
-  color: #9ca3af !important;
-}
-
-/* Spezifische Korrekturen für den Light-Mode */
-.light .border-emerald-500\/20 {
-  border-color: rgba(16, 185, 129, 0.4) !important;
-}
-
-.light .border-blue-500\/20 {
-  border-color: rgba(59, 130, 246, 0.4) !important;
-}
-
-.light .border-teal-500\/20 {
-  border-color: rgba(20, 184, 166, 0.4) !important;
+.light .bg-emerald-500 *,
+.light .bg-emerald-600 *,
+.light .bg-blue-500 *,
+.light .bg-blue-600 *,
+.light .bg-red-500 *,
+.light .bg-red-600 *,
+.light .bg-teal-500 *,
+.light .bg-teal-600 *,
+.light .bg-amber-500 *,
+.light .bg-amber-600 * {
+  color: #ffffff !important;
 }
 
 /* Layout-Korrektur für die Glocke border */

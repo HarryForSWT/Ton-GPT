@@ -177,6 +177,22 @@ export default function RequestDetailPage({ params }: Props) {
       setRequest(req);
 
       if (req) {
+        // Gelesen-Status in Cookie eintragen, falls reviewed
+        if (req.status === "reviewed") {
+          try {
+            const cookies = document.cookie.split("; ");
+            const readCookie = cookies.find(row => row.startsWith("read_requests="));
+            const readIds = readCookie ? readCookie.split("=")[1].split(",").filter(Boolean) : [];
+            
+            if (!readIds.includes(req.id)) {
+              readIds.push(req.id);
+              document.cookie = `read_requests=${readIds.join(",")}; path=/; max-age=31536000; SameSite=Lax`;
+            }
+          } catch (e) {
+            console.error("Fehler beim Setzen des Cookie-Gelesen-Status:", e);
+          }
+        }
+
         // Prüfen, ob das Wort bereits lokal in den Vokabeln existiert
         try {
           const { getVocabList } = await import("@/lib/db");
@@ -188,8 +204,9 @@ export default function RequestDetailPage({ params }: Props) {
         } catch (err) {
           console.error("Fehler beim Suchen nach lokalen Vokabeln:", err);
         }
-        // Schüler-Audio laden
-        if (req.student_audio_url) {
+
+        // Schüler-Audio laden (nur wenn vorhanden und nicht "no-audio")
+        if (req.student_audio_url && req.student_audio_url !== "no-audio") {
           try {
             const url = await getSignedAudioUrl("student-audio", req.student_audio_url);
             const data = await fetchBlob(url);
@@ -201,7 +218,8 @@ export default function RequestDetailPage({ params }: Props) {
         const resp = await getResponseForRequest(id);
         setResponse(resp);
 
-        if (resp?.audio_url) {
+        // Lehrer-Audio laden (nur wenn vorhanden und nicht "no-audio")
+        if (resp?.audio_url && resp.audio_url !== "no-audio") {
           try {
             const url = await getSignedAudioUrl("teacher-audio", resp.audio_url);
             const data = await fetchBlob(url);

@@ -4,6 +4,7 @@ import { de } from "@/locales/de";
 import { createClient } from "@/utils/supabase/server";
 import { Bell } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
+import { cookies } from "next/headers";
 
 export default async function StudentDashboard() {
   const t = de.studentDashboard;
@@ -22,15 +23,20 @@ export default async function StudentDashboard() {
       .single();
     displayName = profile?.display_name || user.email?.split('@')[0] || "";
 
-    // 2. Ungelesene reviewed Anfragen zählen
-    const { count, error } = await supabase
+    // 2. Ungelesene reviewed Anfragen zählen (Gelesene IDs aus Cookie herausfiltern)
+    const { data: reviewedRequests, error } = await supabase
       .from('pronunciation_requests')
-      .select('*', { count: 'exact', head: true })
+      .select('id')
       .eq('student_id', user.id)
       .eq('status', 'reviewed');
     
-    if (!error) {
-      unreadCount = count || 0;
+    if (!error && reviewedRequests) {
+      const cookieStore = await cookies();
+      const readRequestsCookie = cookieStore.get("read_requests")?.value || "";
+      const readIds = readRequestsCookie.split(",").filter(Boolean);
+      
+      const reviewedIds = reviewedRequests.map((r) => r.id);
+      unreadCount = reviewedIds.filter((id) => !readIds.includes(id)).length;
     }
   }
 
