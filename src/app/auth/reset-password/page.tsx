@@ -1,14 +1,14 @@
 import Link from "next/link";
-import { login } from "../actions";
+import { resetPassword } from "../actions";
 
-export default async function Login(props: { searchParams: Promise<{ message?: string, error?: string }> }) {
+export default async function ResetPassword(props: { searchParams: Promise<{ message?: string, error?: string }> }) {
   const searchParams = await props.searchParams;
 
   return (
     <div className="min-h-screen bg-neutral-950 flex flex-col justify-center items-center p-6">
       <div className="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-3xl p-8">
-        <h1 className="text-3xl font-bold text-white text-center mb-2">Ton-GPT</h1>
-        <p className="text-neutral-400 text-center mb-8">Sign in to your account</p>
+        <h1 className="text-3xl font-bold text-white text-center mb-2">Reset Password</h1>
+        <p className="text-neutral-400 text-center mb-8">Enter your email to receive a link</p>
 
         {searchParams?.error && (
             <div className="mb-4 p-3 bg-red-500/20 text-red-400 rounded-xl text-center text-sm">
@@ -21,7 +21,7 @@ export default async function Login(props: { searchParams: Promise<{ message?: s
             </div>
         )}
 
-        <form className="space-y-4" action={login}>
+        <form className="space-y-4" action={resetPassword}>
           <div>
             <label className="block text-sm font-medium text-neutral-400 mb-1">Email</label>
             <input
@@ -32,29 +32,17 @@ export default async function Login(props: { searchParams: Promise<{ message?: s
               placeholder="you@example.com"
             />
           </div>
-          <div>
-            <div className="flex justify-between items-center mb-1">
-              <label className="block text-sm font-medium text-neutral-400">Password</label>
-              <Link href="/auth/reset-password" className="text-xs text-emerald-400 hover:underline">Forgot?</Link>
-            </div>
-            <input
-              type="password"
-              name="password"
-              required
-              className="w-full bg-neutral-800 border border-neutral-700 rounded-xl p-3 text-white focus:border-emerald-500 focus:outline-none transition-colors"
-              placeholder="••••••••"
-            />
-          </div>
+          
           <button
             type="submit"
             className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold p-3 rounded-xl transition-colors mt-4"
           >
-            Sign In
+            Send Link
           </button>
         </form>
 
         <div className="mt-6 text-center text-sm text-neutral-500">
-            <Link href="/auth/register" className="text-emerald-400 hover:underline">Don&apos;t have an account? Sign up</Link>
+            <Link href="/auth/login" className="text-emerald-400 hover:underline">Back to Sign in</Link>
         </div>
       </div>
     </div>

@@ -1,6 +1,17 @@
 import Link from "next/link";
+import { createClient } from "@/utils/supabase/server";
+import { logout } from "./auth/actions";
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  let role = null;
+  if (user) {
+      const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
+      role = profile?.role;
+  }
+
   return (
     <div className="min-h-screen bg-neutral-950 flex flex-col justify-center items-center p-6">
       <div className="text-center mb-12">
@@ -11,26 +22,36 @@ export default function Home() {
       </div>
 
       <div className="flex flex-col gap-4 w-full max-w-xs">
-        <Link
-          href="/auth/login"
-          className="bg-emerald-500 hover:bg-emerald-600 text-white text-center font-bold py-4 rounded-2xl transition-colors shadow-lg shadow-emerald-500/20"
-        >
-          Sign In
-        </Link>
-        <div className="flex gap-4">
-          <Link
-            href="/student/vocab"
-            className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-white text-center font-medium py-3 rounded-2xl transition-colors"
-          >
-            Student Mode
-          </Link>
-          <Link
-            href="/teacher"
-            className="flex-1 bg-neutral-800 hover:bg-neutral-700 text-white text-center font-medium py-3 rounded-2xl transition-colors"
-          >
-            Teacher Mode
-          </Link>
-        </div>
+        {user ? (
+          <div className="w-full flex flex-col gap-4">
+            <Link
+                href={role === 'teacher' ? '/teacher' : '/student'}
+                className="bg-emerald-500 hover:bg-emerald-600 text-white text-center font-bold py-4 rounded-2xl transition-colors shadow-lg shadow-emerald-500/20"
+            >
+                Go to Dashboard
+            </Link>
+            <form action={logout}>
+                <button type="submit" className="w-full bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-3 rounded-2xl transition-colors">
+                    Logout
+                </button>
+            </form>
+          </div>
+        ) : (
+          <>
+            <Link
+              href="/auth/login"
+              className="bg-emerald-500 hover:bg-emerald-600 text-white text-center font-bold py-4 rounded-2xl transition-colors shadow-lg shadow-emerald-500/20"
+            >
+              Sign In
+            </Link>
+            <Link
+              href="/auth/register"
+              className="bg-neutral-800 hover:bg-neutral-700 text-white text-center font-medium py-3 rounded-2xl transition-colors"
+            >
+              Create Account
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );
