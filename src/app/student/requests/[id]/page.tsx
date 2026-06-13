@@ -29,7 +29,11 @@ async function fetchBlob(url: string): Promise<{ blob: Blob; mimeType: string } 
     if (blob.type.includes("json") || blob.type.includes("html") || blob.type.includes("text")) {
       return null;
     }
-    return { blob, mimeType: blob.type || "audio/webm" };
+    let finalMime = blob.type || "audio/webm";
+    if (finalMime.includes("octet-stream") || finalMime.includes("x-www-form-urlencoded")) {
+      finalMime = "audio/webm";
+    }
+    return { blob, mimeType: finalMime };
   } catch {
     return null;
   }

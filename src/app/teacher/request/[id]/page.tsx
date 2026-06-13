@@ -31,7 +31,11 @@ async function fetchBlob(url: string): Promise<{ blob: Blob; mimeType: string } 
   try {
     const res = await fetch(url);
     const blob = await res.blob();
-    return { blob, mimeType: blob.type || "audio/webm" };
+    let finalMime = blob.type || "audio/webm";
+    if (finalMime.includes("octet-stream") || finalMime.includes("x-www-form-urlencoded")) {
+      finalMime = "audio/webm";
+    }
+    return { blob, mimeType: finalMime };
   } catch {
     return null;
   }
