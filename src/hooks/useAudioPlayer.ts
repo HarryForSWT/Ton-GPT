@@ -40,6 +40,9 @@ export function useAudioPlayer(): UseAudioPlayerResult {
     }
     if (audioRef.current) {
       audioRef.current.pause();
+      audioRef.current.onerror = null;
+      audioRef.current.onloadedmetadata = null;
+      audioRef.current.onended = null;
       audioRef.current.src = '';
       audioRef.current = null;
     }

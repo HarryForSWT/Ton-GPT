@@ -93,6 +93,17 @@ export default function RequestDetailPage({ params }: Props) {
         durationMs: response?.audio_duration ? response.audio_duration * 1000 : 0,
       });
 
+      // Audio speichern mit Rolle "student" (falls vorhanden)
+      if (studentBlob) {
+        await saveAudioRecording({
+          vocabId,
+          role: "student",
+          blob: studentBlob.blob,
+          mimeType: studentBlob.mimeType,
+          durationMs: 0,
+        });
+      }
+
       // Nach lokalem Speichern: Cloud-Daten löschen (Local-First)
       await deletePronunciationRequest(request.id, request.student_audio_url, response?.audio_url || null);
 
