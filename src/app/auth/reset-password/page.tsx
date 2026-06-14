@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requestPasswordReset } from "../actions";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { de } from "@/locales/de";
 
 export default async function ResetPassword(props: { searchParams: Promise<{ message?: string, error?: string }> }) {
@@ -35,12 +36,9 @@ export default async function ResetPassword(props: { searchParams: Promise<{ mes
             />
           </div>
           
-          <button
-            type="submit"
-            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold p-3 rounded-xl transition-colors mt-4"
-          >
+          <SubmitButton className="w-full mt-4 !p-3 !rounded-xl">
             {t.sendResetBtn}
-          </button>
+          </SubmitButton>
         </form>
 
         <div className="mt-6 text-center text-sm text-neutral-500">

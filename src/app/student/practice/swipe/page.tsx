@@ -214,7 +214,7 @@ export default function SwipeTonesPage() {
         
         // Initialize Web Audio API for feedback sounds on mobile iOS
         if (!audioCtxRef.current) {
-          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
           if (AudioContextClass) {
             audioCtxRef.current = new AudioContextClass();
           }

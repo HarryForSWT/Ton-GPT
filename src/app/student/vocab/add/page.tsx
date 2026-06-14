@@ -344,11 +344,11 @@ export default function AddVocabularyPage() {
             <Button
               type="submit"
               variant="primary"
-              disabled={loading}
+              isLoading={loading}
               className="flex-1 shadow-lg shadow-emerald-500/10"
             >
-              <Save size={18} />
-              {loading ? "Wird gespeichert..." : t.saveBtn}
+              {!loading && <Save size={18} />}
+              {loading ? "Speichert..." : t.saveBtn}
             </Button>
           </div>
         </form>

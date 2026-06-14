@@ -358,20 +358,12 @@ export default function NewRequestPage() {
               type="button"
               variant="primary"
               onClick={handleSubmit}
-              disabled={submitting || !manualHanzi.trim()}
+              disabled={!manualHanzi.trim()}
+              isLoading={submitting}
               className="flex-1 shadow-lg shadow-emerald-500/10"
             >
-              {submitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  {t.uploading}
-                </>
-              ) : (
-                <>
-                  <Send size={16} />
-                  {t.submitBtn}
-                </>
-              )}
+              {!submitting && <Send size={16} />}
+              {submitting ? t.uploading : t.submitBtn}
             </Button>
           </div>
         </div>

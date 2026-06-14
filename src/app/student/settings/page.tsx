@@ -2,8 +2,9 @@
 
 import React, { useState, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, Lock, Eye, EyeOff, Download, Upload, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Lock, Eye, EyeOff, Download, Upload, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { de } from "@/locales/de";
+import { Button } from "@/components/ui/Button";
 import { createClient } from "@/utils/supabase/client";
 import { getVocabList, importVocab, Vocabulary } from "@/lib/db";
 import { suggestPinyin, pinyinNumberToSymbol, pinyinSymbolToNumber } from "@/lib/pinyinConverter";
@@ -22,6 +23,7 @@ export default function StudentSettings() {
   // ─── CSV Backup States ───────────────────────────────────────────────────
   const [backupMessage, setBackupMessage] = useState("");
   const [backupIsError, setBackupIsError] = useState(false);
+  const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Helper to escape CSV values
@@ -179,6 +181,8 @@ export default function StudentSettings() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    setImporting(true);
+
     const reader = new FileReader();
     reader.onload = async (event) => {
       try {
@@ -293,11 +297,14 @@ export default function StudentSettings() {
         console.error(err);
         setBackupMessage("Fehler beim Lesen oder Einpflegen der CSV-Datei.");
         setBackupIsError(true);
+      } finally {
+        setImporting(false);
       }
     };
     reader.onerror = () => {
       setBackupMessage("Fehler beim Lesen der Datei.");
       setBackupIsError(true);
+      setImporting(false);
     };
     reader.readAsText(file);
   }
@@ -430,13 +437,13 @@ export default function StudentSettings() {
               </div>
             )}
 
-            <button
+            <Button
               type="submit"
-              disabled={loading}
-              className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold p-3 rounded-xl transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              isLoading={loading}
+              className="w-full !bg-purple-500 hover:!bg-purple-600 !p-3 !rounded-xl"
             >
               {loading ? de.admin.saving : t.saveBtn}
-            </button>
+            </Button>
           </form>
         </section>
 
@@ -498,10 +505,10 @@ export default function StudentSettings() {
               />
               <label
                 htmlFor="csv-import-input"
-                className="flex items-center justify-center gap-2 p-3 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/25 hover:border-teal-500/40 rounded-xl text-xs font-bold text-teal-400 transition-all active:scale-98 cursor-pointer text-center"
+                className={`flex items-center justify-center gap-2 p-3 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/25 hover:border-teal-500/40 rounded-xl text-xs font-bold text-teal-400 transition-all active:scale-98 cursor-pointer text-center ${importing ? 'opacity-70 cursor-not-allowed' : ''}`}
               >
-                <Upload size={14} />
-                Vokabeln importieren (CSV)
+                {importing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                {importing ? "Importiert..." : "Vokabeln importieren (CSV)"}
               </label>
             </div>
           </div>

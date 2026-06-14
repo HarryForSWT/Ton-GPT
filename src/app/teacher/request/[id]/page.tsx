@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Send, Mic2, MessageSquare, CheckCircle2, Trash2 } from "lucide-react";
 import { de } from "@/locales/de";
+import { Button } from "@/components/ui/Button";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 import {
   getRequestById,
@@ -361,24 +362,16 @@ export default function ReviewRequestPage({ params }: Props) {
               <div className="p-3 bg-red-950/40 border border-red-800/60 text-red-300 rounded-xl text-sm">{error}</div>
             )}
 
-            {/* Absenden */}
-            <button
+            <Button
+              type="button"
               onClick={handleSubmit}
-              disabled={submitting || (!comment.trim() && !audioBlob)}
-              className="w-full flex items-center justify-center gap-2 py-4 bg-blue-500 hover:bg-blue-600 disabled:bg-neutral-800 disabled:text-neutral-600 text-white rounded-2xl font-bold transition-all active:scale-95 shadow-lg shadow-blue-500/20 disabled:shadow-none"
+              disabled={!comment.trim() && !audioBlob}
+              isLoading={submitting}
+              className="w-full !bg-blue-500 hover:!bg-blue-600 shadow-lg shadow-blue-500/20"
             >
-              {submitting ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                  {t.uploading}
-                </>
-              ) : (
-                <>
-                  <Send size={18} />
-                  {t.submitBtn}
-                </>
-              )}
-            </button>
+              {!submitting && <Send size={18} />}
+              {submitting ? t.uploading : t.submitBtn}
+            </Button>
           </div>
         ) : existingResponse && (
           /* Bereits gesendetes Feedback anzeigen */

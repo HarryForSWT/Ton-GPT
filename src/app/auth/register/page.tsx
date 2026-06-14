@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { register } from "../actions";
+import { SubmitButton } from "@/components/ui/SubmitButton";
 import { de } from "@/locales/de";
 
 export default async function Register(props: { searchParams: Promise<{ error?: string }> }) {
@@ -66,12 +67,9 @@ export default async function Register(props: { searchParams: Promise<{ error?: 
           </div>
           {/* Rolle ist fest auf "student" gesetzt — Lehrer werden nur vom Admin erstellt */}
           <input type="hidden" name="role" value="student" />
-          <button
-            type="submit"
-            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold p-3 rounded-xl transition-colors mt-4"
-          >
+          <SubmitButton className="w-full mt-4 !p-3 !rounded-xl">
             {t.signUpBtn}
-          </button>
+          </SubmitButton>
         </form>
 
         <div className="mt-6 text-center text-sm text-neutral-500">
