@@ -6,6 +6,7 @@ import { ArrowLeft, Lock, Eye, EyeOff, Download, Upload, CheckCircle2, AlertTria
 import { de } from "@/locales/de";
 import { createClient } from "@/utils/supabase/client";
 import { getVocabList, importVocab, Vocabulary } from "@/lib/db";
+import { suggestPinyin, pinyinNumberToSymbol, pinyinSymbolToNumber } from "@/lib/pinyinConverter";
 
 export default function StudentSettings() {
   const t = de.settings;
@@ -197,11 +198,25 @@ export default function StudentSettings() {
         const csvVocabs: Vocabulary[] = [];
         for (const row of parsedRows) {
           if (!row.hanzi || !row.germanMeaning) continue;
+
+          let finalPinyin = row.pinyin ? row.pinyin.trim() : "";
+          let finalPinyinNumber = row.pinyinNumber ? row.pinyinNumber.trim() : "";
+
+          if (!finalPinyin && !finalPinyinNumber) {
+            const suggestions = suggestPinyin(row.hanzi.trim());
+            finalPinyin = suggestions.pinyinSymbol;
+            finalPinyinNumber = suggestions.pinyinNumber;
+          } else if (finalPinyin && !finalPinyinNumber) {
+            finalPinyinNumber = pinyinSymbolToNumber(finalPinyin);
+          } else if (!finalPinyin && finalPinyinNumber) {
+            finalPinyin = pinyinNumberToSymbol(finalPinyinNumber);
+          }
+
           csvVocabs.push({
             id: row.id || crypto.randomUUID(),
             hanzi: row.hanzi.trim(),
-            pinyin: row.pinyin ? row.pinyin.trim() : "",
-            pinyinNumber: row.pinyinNumber ? row.pinyinNumber.trim() : "",
+            pinyin: finalPinyin,
+            pinyinNumber: finalPinyinNumber,
             germanMeaning: row.germanMeaning.trim(),
             createdAt: row.createdAt || new Date().toISOString(),
             learned: row.learned === "true",

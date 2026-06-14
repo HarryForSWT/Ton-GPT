@@ -36,6 +36,7 @@ export async function register(formData: FormData) {
   const password = formData.get('password') as string
   const display_name = formData.get('display_name') as string
   const role = formData.get('role') as string
+  const wants_email_notifications = formData.get('wants_email_notifications') === 'true'
 
   const { error } = await supabase.auth.signUp({
     email,
@@ -44,6 +45,7 @@ export async function register(formData: FormData) {
       data: {
         display_name,
         role,
+        wants_email_notifications,
       }
     }
   })

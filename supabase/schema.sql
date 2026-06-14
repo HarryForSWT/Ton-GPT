@@ -8,6 +8,7 @@ CREATE TABLE profiles (
     display_name TEXT,
     email TEXT UNIQUE NOT NULL,
     role user_role NOT NULL,
+    wants_email_notifications BOOLEAN DEFAULT true NOT NULL,
     assigned_teacher_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
@@ -33,12 +34,13 @@ CREATE POLICY "Teachers can update student profiles" ON profiles FOR UPDATE USIN
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, display_name, role)
+  INSERT INTO public.profiles (id, email, display_name, role, wants_email_notifications)
   VALUES (
     NEW.id,
     NEW.email,
     COALESCE(NEW.raw_user_meta_data->>'display_name', 'Neuer Benutzer'),
-    COALESCE((NEW.raw_user_meta_data->>'role')::public.user_role, 'student'::public.user_role)
+    COALESCE((NEW.raw_user_meta_data->>'role')::public.user_role, 'student'::public.user_role),
+    COALESCE((NEW.raw_user_meta_data->>'wants_email_notifications')::boolean, true)
   );
   RETURN NEW;
 END;
@@ -121,7 +123,11 @@ CREATE POLICY "Students can read responses to their requests" ON teacher_respons
 ALTER TABLE pronunciation_requests
   ADD COLUMN IF NOT EXISTS student_audio_url TEXT,
   ADD COLUMN IF NOT EXISTS german_meaning TEXT,
-  ADD COLUMN IF NOT EXISTS pinyin_number TEXT;
+  ADD COLUMN IF NOT EXISTS pinyin_number TEXT,
+  ADD COLUMN IF NOT EXISTS emailed_at TIMESTAMP WITH TIME ZONE;
+
+ALTER TABLE teacher_responses
+  ADD COLUMN IF NOT EXISTS emailed_at TIMESTAMP WITH TIME ZONE;
 
 
 -- ─── Schema-Erweiterung (Phase 7: Verwaltung & Passwort-Reset) ───────────────
@@ -134,6 +140,7 @@ CREATE TABLE IF NOT EXISTS password_reset_requests (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     student_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
     status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'resolved')) NOT NULL,
+    emailed_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 

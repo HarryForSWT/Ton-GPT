@@ -49,6 +49,21 @@ export default async function Register(props: { searchParams: Promise<{ error?: 
               placeholder="••••••••"
             />
           </div>
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-neutral-400 mt-2">
+              <input
+                type="checkbox"
+                name="wants_email_notifications"
+                value="true"
+                defaultChecked
+                className="w-4 h-4 rounded border-neutral-700 bg-neutral-800 text-emerald-500 focus:ring-emerald-500 focus:ring-offset-neutral-900"
+              />
+              Ich möchte E-Mail-Benachrichtigungen erhalten
+            </label>
+            <p className="text-[10px] text-neutral-500 mt-1 pl-6">
+              Wenn du eine ausgedachte E-Mail-Adresse verwendest, deaktiviere diese Option.
+            </p>
+          </div>
           {/* Rolle ist fest auf "student" gesetzt — Lehrer werden nur vom Admin erstellt */}
           <input type="hidden" name="role" value="student" />
           <button
