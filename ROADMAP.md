@@ -2,7 +2,7 @@
 
 This roadmap outlines the milestones for building the Ton-GPT application.
 
-## Phase 1: Foundation (Current)
+## Phase 1: Foundation
 - [x] Initial Next.js 15 App Router setup
 - [x] Tailwind CSS and TypeScript configuration
 - [x] PWA support integration (`@serwist/next`)
@@ -32,8 +32,17 @@ This roadmap outlines the milestones for building the Ton-GPT application.
 - [x] Implement canvas pitch comparison curves for visual analysis
 - [x] Provide automated feedback on tone and rhythm accuracy
 
-## Phase 6: Polish and Deployment (Current)
-- [ ] Comprehensive PWA testing on iOS and Android devices
-- [ ] UI/UX refinements for mobile interactions
-- [ ] Production deployment to Vercel
-- [ ] Teacher and Student onboarding flow
+## Phase 6: Polish and Deployment
+- [x] Comprehensive PWA testing on iOS and Android devices
+- [x] UI/UX refinements for mobile interactions
+- [x] Production deployment to Vercel
+- [x] Teacher and Student onboarding flow
+
+## Phase 7: Verwaltung & Lokalisierung (Current)
+- [ ] Vollständige deutsche Lokalisierung aller UI-Texte
+- [ ] Registrierung nur für Schüler (Rollenwahl entfernt)
+- [ ] Lehrer-Dashboard: Schülerverwaltung (Zuordnung zu Lehrern)
+- [ ] Lehrer-Dashboard: Neue Lehrer registrieren
+- [ ] Vereinfachter Passwort-Reset (Schüler → Lehrer-Benachrichtigung → Reset auf 123456)
+- [ ] Schüler: Eigenes Passwort ändern (Einstellungen-Seite)
+- [ ] Schema-Erweiterung: `assigned_teacher_id` in profiles, `password_reset_requests` Tabelle

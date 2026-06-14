@@ -4,7 +4,7 @@ export default function manifest(): MetadataRoute.Manifest {
   return {
     name: 'Ton-GPT',
     short_name: 'Ton-GPT',
-    description: 'A Progressive Web App for learning Mandarin pronunciation',
+    description: 'Progressive Web App zum Üben chinesischer Aussprache',
     start_url: '/',
     display: 'standalone',
     background_color: '#ffffff',

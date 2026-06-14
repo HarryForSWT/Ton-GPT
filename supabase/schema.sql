@@ -8,6 +8,7 @@ CREATE TABLE profiles (
     display_name TEXT,
     email TEXT UNIQUE NOT NULL,
     role user_role NOT NULL,
+    assigned_teacher_id UUID REFERENCES profiles(id) ON DELETE SET NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
@@ -17,11 +18,14 @@ ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 -- Profiles RLS: 
 -- 1. Users can read their own profile.
 -- 2. Users can update their own profile.
--- 3. Teachers can read student profiles (to see who sent requests).
--- MVP restriction: Students don't need to see other teachers.
+-- 3. Teachers can read all profiles (to see who sent requests).
+-- 4. Teachers can update student profiles (for assignment and admin).
 CREATE POLICY "Users can read own profile" ON profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Users can update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Teachers can read all profiles" ON profiles FOR SELECT USING (
+    (auth.jwt()->'user_metadata'->>'role') = 'teacher'
+);
+CREATE POLICY "Teachers can update student profiles" ON profiles FOR UPDATE USING (
     (auth.jwt()->'user_metadata'->>'role') = 'teacher'
 );
 
@@ -119,3 +123,27 @@ ALTER TABLE pronunciation_requests
   ADD COLUMN IF NOT EXISTS german_meaning TEXT,
   ADD COLUMN IF NOT EXISTS pinyin_number TEXT;
 
+
+-- ─── Schema-Erweiterung (Phase 7: Verwaltung & Passwort-Reset) ───────────────
+
+-- Spalte assigned_teacher_id zu profiles hinzufügen (falls noch nicht vorhanden)
+ALTER TABLE profiles ADD COLUMN IF NOT EXISTS assigned_teacher_id UUID REFERENCES profiles(id) ON DELETE SET NULL;
+
+-- Passwort-Reset-Anfragen Tabelle
+CREATE TABLE IF NOT EXISTS password_reset_requests (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    student_id UUID REFERENCES profiles(id) ON DELETE CASCADE NOT NULL,
+    status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'resolved')) NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+
+ALTER TABLE password_reset_requests ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Students can insert own reset requests" ON password_reset_requests
+  FOR INSERT WITH CHECK (auth.uid() = student_id);
+CREATE POLICY "Students can read own reset requests" ON password_reset_requests
+  FOR SELECT USING (auth.uid() = student_id);
+CREATE POLICY "Teachers can read all reset requests" ON password_reset_requests
+  FOR SELECT USING ((auth.jwt()->'user_metadata'->>'role') = 'teacher');
+CREATE POLICY "Teachers can update reset requests" ON password_reset_requests
+  FOR UPDATE USING ((auth.jwt()->'user_metadata'->>'role') = 'teacher');

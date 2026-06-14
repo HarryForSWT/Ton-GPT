@@ -14,7 +14,7 @@ export async function login(formData: FormData) {
   })
 
   if (error) {
-    redirect('/auth/login?error=Could not authenticate user')
+    redirect('/auth/login?error=Anmeldung fehlgeschlagen. Bitte überprüfe deine Zugangsdaten.')
   }
 
   const { data: { user } } = await supabase.auth.getUser()
@@ -52,20 +52,38 @@ export async function register(formData: FormData) {
     redirect(`/auth/register?error=${encodeURIComponent(error.message)}`)
   }
 
-  redirect('/auth/login?message=Check email to continue sign in process')
+  redirect('/auth/login?message=Konto erstellt! Bitte überprüfe deine E-Mails, um die Registrierung abzuschließen.')
 }
 
-export async function resetPassword(formData: FormData) {
-    const supabase = await createClient()
+export async function requestPasswordReset(formData: FormData) {
+    const { createAdminClient } = await import('@/utils/supabase/admin')
+    const supabase = createAdminClient()
     const email = formData.get('email') as string
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email)
+    // Schüler-Profil anhand der E-Mail suchen
+    const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('email', email)
+        .single()
 
-    if (error) {
-        redirect(`/auth/reset-password?error=${encodeURIComponent(error.message)}`)
+    if (profileError || !profile) {
+        redirect('/auth/reset-password?error=Kein Konto mit dieser E-Mail-Adresse gefunden.')
     }
 
-    redirect('/auth/reset-password?message=Check email for password reset link')
+    // Passwort-Reset-Anfrage in der Datenbank erstellen
+    const { error } = await supabase
+        .from('password_reset_requests')
+        .insert({
+            student_id: profile.id,
+            status: 'pending',
+        })
+
+    if (error) {
+        redirect(`/auth/reset-password?error=${encodeURIComponent('Fehler beim Senden der Anfrage. Bitte versuche es erneut.')}`)
+    }
+
+    redirect('/auth/reset-password?message=Dein Lehrer wurde benachrichtigt. Bitte frage bei deinem Lehrer nach dem neuen Passwort.')
 }
 
 export async function logout() {

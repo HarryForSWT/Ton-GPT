@@ -1,4 +1,38 @@
 export const de = {
+  // ─── Auth ───────────────────────────────────────────────────────────────────
+  auth: {
+    loginTitle: "Anmelden",
+    loginSubtitle: "Melde dich bei deinem Konto an",
+    registerTitle: "Konto erstellen",
+    registerSubtitle: "Werde Teil von Ton-GPT",
+    resetTitle: "Passwort vergessen",
+    resetSubtitle: "Dein Lehrer wird informiert und kann dein Passwort zurücksetzen.",
+    emailLabel: "E-Mail",
+    emailPlaceholder: "deine@email.de",
+    passwordLabel: "Passwort",
+    displayNameLabel: "Anzeigename",
+    displayNamePlaceholder: "Max Mustermann",
+    signInBtn: "Anmelden",
+    signUpBtn: "Registrieren",
+    forgotLink: "Vergessen?",
+    noAccountLink: "Noch kein Konto? Registrieren",
+    hasAccountLink: "Bereits ein Konto? Anmelden",
+    backToLogin: "Zurück zur Anmeldung",
+    sendResetBtn: "Anfrage senden",
+    resetRequestSent: "Dein Lehrer wurde benachrichtigt. Bitte frage bei deinem Lehrer nach dem neuen Passwort.",
+    authError: "Anmeldung fehlgeschlagen. Bitte überprüfe deine Zugangsdaten.",
+    registerSuccess: "Konto erstellt! Du kannst dich jetzt anmelden.",
+    logoutBtn: "Abmelden",
+  },
+  // ─── Welcome ────────────────────────────────────────────────────────────────
+  welcome: {
+    subtitle: "Chinesische Aussprache meistern.",
+    signInBtn: "Anmelden",
+    registerBtn: "Konto erstellen",
+    dashboardBtn: "Zum Dashboard",
+    logoutBtn: "Abmelden",
+  },
+  // ─── Vokabelliste ──────────────────────────────────────────────────────────
   vocabList: {
     title: "Vokabelliste",
     subtitle: "Verwalte deine Chinesisch-Vokabeln offline",
@@ -59,6 +93,7 @@ export const de = {
     saveBtn: "Änderungen speichern",
     cancelBtn: "Abbrechen",
   },
+  // ─── Schüler-Dashboard ─────────────────────────────────────────────────────
   studentDashboard: {
     title: "Schüler-Dashboard",
     welcome: "Willkommen auf deiner Lernreise!",
@@ -69,7 +104,10 @@ export const de = {
     requestsDesc: "Lass deine Aussprache vom Lehrer bewerten",
     calendarTitle: "Lernkalender",
     calendarDesc: "Verfolge deinen täglichen Fortschritt",
+    settingsTitle: "Einstellungen",
+    settingsDesc: "Passwort ändern und Kontoverwaltung",
   },
+  // ─── Anfragen ──────────────────────────────────────────────────────────────
   requests: {
     // Listenansicht
     title: "Meine Anfragen",
@@ -110,6 +148,7 @@ export const de = {
     createdAt: "Gesendet am",
     backToRequests: "Zurück zur Übersicht",
   },
+  // ─── Lehrer-Dashboard ──────────────────────────────────────────────────────
   teacherDashboard: {
     title: "Lehrer-Dashboard",
     subtitle: "Bewerte die Aussprache deiner Schüler",
@@ -128,7 +167,12 @@ export const de = {
     statusPending: "Neu",
     statusReviewed: "Beantwortet",
     loading: "Anfragen werden geladen...",
+    // Tabs
+    tabRequests: "Anfragen",
+    tabStudents: "Schüler",
+    tabManagement: "Verwaltung",
   },
+  // ─── Lehrer-Review ─────────────────────────────────────────────────────────
   teacherReview: {
     title: "Aussprache bewerten",
     backBtn: "Zurück",
@@ -148,6 +192,7 @@ export const de = {
     uploading: "Wird gesendet...",
     loading: "Wird geladen...",
   },
+  // ─── Audio ─────────────────────────────────────────────────────────────────
   audio: {
     recordBtn: "Aufnahme starten",
     stopBtn: "Stoppen",
@@ -170,6 +215,7 @@ export const de = {
     tapToRecord: "Tippen zum Aufnehmen",
     recordingComplete: "Aufnahme abgeschlossen",
   },
+  // ─── Tonhelfer ─────────────────────────────────────────────────────────────
   toneHelper: {
     title: "Tonzeichen",
     tone1: "Ton 1 (ˉ)",
@@ -178,6 +224,7 @@ export const de = {
     tone4: "Ton 4 (ˋ)",
     tone0: "Ton 0",
   },
+  // ─── Kalender ──────────────────────────────────────────────────────────────
   calendar: {
     title: "Mein Lernkalender",
     subtitle: "Verfolge deine tägliche Lernaktivität",
@@ -205,6 +252,7 @@ export const de = {
     practiceBtn: "Üben",
     practiceSuccess: "Vokabel erfolgreich geübt!",
   },
+  // ─── Tonanalyse ────────────────────────────────────────────────────────────
   toneAnalyser: {
     title: "Aussprache-Analyse",
     subtitle: "Maschineller Abgleich mit dem Lehrer-Audio",
@@ -224,5 +272,50 @@ export const de = {
     noScore: "Noch keine Analyse durchgeführt.",
     saveReferenceSuccess: "Lehrer-Audio als Referenz gespeichert!",
     saveReferenceBtn: "Als Referenz zu Vokabel hinzufügen",
-  }
+  },
+  // ─── Admin (Lehrer-Dashboard) ──────────────────────────────────────────────
+  admin: {
+    studentsTab: "Schüler",
+    managementTab: "Verwaltung",
+    studentListTitle: "Schülerverwaltung",
+    assignToMe: "Mir zuordnen",
+    assignTo: "Zuordnen an",
+    currentTeacher: "Aktueller Lehrer",
+    noTeacher: "Nicht zugeordnet",
+    registerTeacher: "Neuen Lehrer registrieren",
+    registerTeacherDesc: "Erstelle ein neues Lehrer-Konto",
+    resetPasswordTitle: "Passwort zurücksetzen",
+    resetToDefault: 'Auf "123456" zurücksetzen',
+    resetSuccess: 'Passwort wurde auf "123456" zurückgesetzt!',
+    resetConfirm: 'Passwort wirklich auf "123456" zurücksetzen?',
+    passwordRequests: "Passwort-Anfragen",
+    noPasswordRequests: "Keine offenen Passwort-Anfragen.",
+    noStudents: "Keine Schüler vorhanden.",
+    studentName: "Name",
+    studentEmail: "E-Mail",
+    assignedTeacher: "Zugewiesener Lehrer",
+    actions: "Aktionen",
+    registerBtn: "Lehrer erstellen",
+    registerSuccess: "Neuer Lehrer wurde erfolgreich registriert!",
+    registerError: "Fehler beim Registrieren des Lehrers.",
+    loading: "Wird geladen...",
+    saving: "Wird gespeichert...",
+    resolved: "Erledigt",
+    markResolved: "Als erledigt markieren",
+    requestedAt: "Angefragt am",
+  },
+  // ─── Einstellungen ─────────────────────────────────────────────────────────
+  settings: {
+    title: "Einstellungen",
+    changePassword: "Passwort ändern",
+    currentPassword: "Aktuelles Passwort",
+    newPassword: "Neues Passwort",
+    confirmPassword: "Passwort bestätigen",
+    saveBtn: "Passwort speichern",
+    passwordMismatch: "Die Passwörter stimmen nicht überein.",
+    passwordChanged: "Passwort erfolgreich geändert!",
+    passwordTooShort: "Das Passwort muss mindestens 6 Zeichen lang sein.",
+    passwordError: "Fehler beim Ändern des Passworts. Bitte versuche es erneut.",
+    backToDashboard: "Zurück zum Dashboard",
+  },
 };

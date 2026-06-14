@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/server";
 import { logout } from "./auth/actions";
+import { de } from "@/locales/de";
 
 export default async function Home() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  const t = de.welcome;
 
   let role = null;
   if (user) {
@@ -18,7 +20,7 @@ export default async function Home() {
         <h1 className="text-5xl font-extrabold bg-gradient-to-r from-emerald-400 to-blue-500 bg-clip-text text-transparent mb-4">
           Ton-GPT
         </h1>
-        <p className="text-xl text-neutral-400">Master Mandarin Pronunciation.</p>
+        <p className="text-xl text-neutral-400">{t.subtitle}</p>
       </div>
 
       <div className="flex flex-col gap-4 w-full max-w-xs">
@@ -28,11 +30,11 @@ export default async function Home() {
                 href={role === 'teacher' ? '/teacher' : '/student'}
                 className="bg-emerald-500 hover:bg-emerald-600 text-white text-center font-bold py-4 rounded-2xl transition-colors shadow-lg shadow-emerald-500/20"
             >
-                Go to Dashboard
+                {t.dashboardBtn}
             </Link>
             <form action={logout}>
                 <button type="submit" className="w-full bg-neutral-800 hover:bg-neutral-700 text-white font-medium py-3 rounded-2xl transition-colors">
-                    Logout
+                    {t.logoutBtn}
                 </button>
             </form>
           </div>
@@ -42,13 +44,13 @@ export default async function Home() {
               href="/auth/login"
               className="bg-emerald-500 hover:bg-emerald-600 text-white text-center font-bold py-4 rounded-2xl transition-colors shadow-lg shadow-emerald-500/20"
             >
-              Sign In
+              {t.signInBtn}
             </Link>
             <Link
               href="/auth/register"
               className="bg-neutral-800 hover:bg-neutral-700 text-white text-center font-medium py-3 rounded-2xl transition-colors"
             >
-              Create Account
+              {t.registerBtn}
             </Link>
           </>
         )}
