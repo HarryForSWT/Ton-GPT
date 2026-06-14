@@ -9,6 +9,7 @@ export interface Vocabulary {
   createdAt: string;
   learned: boolean;
   bestScore: number;
+  difficulty: 'easy' | 'medium' | 'hard';
   lastPracticedAt?: string;
   learnedAt?: string;
   teacherAudioId?: string;
@@ -35,6 +36,11 @@ interface TonGPTSchema extends DBSchema {
     value: {
       date: string;
       practicedWords: string[];
+      listeningSessions?: {
+        total: number;
+        correct: number;
+        timestamp: string;
+      }[];
     };
   };
   audioRecordings: {
@@ -44,6 +50,28 @@ interface TonGPTSchema extends DBSchema {
       'by-vocabId': string;
     };
   };
+}
+
+/**
+ * Konvertiert ein Datum oder einen ISO-String in ein lokales Datum (YYYY-MM-DD)
+ * basierend auf der Zeitzone Deutschland (Europe/Berlin).
+ */
+export function getLocalDateString(dateInput: Date | string = new Date()): string {
+  const dateObj = typeof dateInput === 'string' ? new Date(dateInput) : dateInput;
+  if (isNaN(dateObj.getTime())) return new Date().toISOString().split('T')[0];
+  
+  try {
+    const formatter = new Intl.DateTimeFormat('sv-SE', {
+      timeZone: 'Europe/Berlin',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+    return formatter.format(dateObj);
+  } catch (e) {
+    console.error('Fehler bei Zeitzonen-Konvertierung:', e);
+    return dateObj.toISOString().split('T')[0];
+  }
 }
 
 let dbPromise: Promise<IDBPDatabase<TonGPTSchema>> | null = null;
@@ -76,13 +104,24 @@ export async function getDB() {
 export async function getVocabList(): Promise<Vocabulary[]> {
   const db = await getDB();
   if (!db) return [];
-  return db.getAll('vocabulary');
+  const list = await db.getAll('vocabulary');
+  return list.map(item => ({
+    ...item,
+    learned: !!item.learned,
+    difficulty: item.difficulty || 'easy'
+  }));
 }
 
 export async function getVocabById(id: string): Promise<Vocabulary | undefined> {
   const db = await getDB();
   if (!db) return undefined;
-  return db.get('vocabulary', id);
+  const item = await db.get('vocabulary', id);
+  if (!item) return undefined;
+  return {
+    ...item,
+    learned: !!item.learned,
+    difficulty: item.difficulty || 'easy'
+  };
 }
 
 export async function addVocab(
@@ -96,6 +135,7 @@ export async function addVocab(
     pinyin: vocabData.pinyin,
     pinyinNumber: vocabData.pinyinNumber,
     germanMeaning: vocabData.germanMeaning,
+    difficulty: vocabData.difficulty || 'easy',
     id,
     createdAt: new Date().toISOString(),
     learned: false,
@@ -189,6 +229,11 @@ export interface DailyActivity {
   added: Vocabulary[];
   learned: Vocabulary[];
   practiced: Vocabulary[];
+  listeningSessions?: {
+    total: number;
+    correct: number;
+    timestamp: string;
+  }[];
 }
 
 /**
@@ -206,7 +251,7 @@ export async function trackPractice(vocabId: string): Promise<void> {
   }
 
   // 2. Zum progress Store für das heutige Datum hinzufügen
-  const dateStr = new Date().toISOString().split('T')[0]; // "YYYY-MM-DD"
+  const dateStr = getLocalDateString();
   const dayProgress = (await db.get('progress', dateStr)) || {
     date: dateStr,
     practicedWords: [],
@@ -216,6 +261,32 @@ export async function trackPractice(vocabId: string): Promise<void> {
     dayProgress.practicedWords.push(vocabId);
     await db.put('progress', dayProgress);
   }
+}
+
+/**
+ * Speichert das Ergebnis einer Hörübungs-Session für das heutige Datum ab (Europe/Berlin Zeitzone).
+ */
+export async function saveListeningSessionResult(correct: number, total: number): Promise<void> {
+  const db = await getDB();
+  if (!db) return;
+
+  const dateStr = getLocalDateString();
+  const dayProgress = (await db.get('progress', dateStr)) || {
+    date: dateStr,
+    practicedWords: [],
+  };
+
+  if (!dayProgress.listeningSessions) {
+    dayProgress.listeningSessions = [];
+  }
+
+  dayProgress.listeningSessions.push({
+    total,
+    correct,
+    timestamp: new Date().toISOString(),
+  });
+
+  await db.put('progress', dayProgress);
 }
 
 /**
@@ -237,19 +308,19 @@ export async function getCalendarActivities(): Promise<Record<string, DailyActiv
     return activities[dateStr];
   };
 
-  // Gruppiere hinzugefügte und gelernte Vokabeln
+  // Gruppiere hinzugefügte und gelernte Vokabeln (im Europe/Berlin-Format)
   for (const v of vocabs) {
     if (v.createdAt) {
-      const addedDate = v.createdAt.split('T')[0];
+      const addedDate = getLocalDateString(v.createdAt);
       getOrCreateDay(addedDate).added.push(v);
     }
     if (v.learned && v.learnedAt) {
-      const learnedDate = v.learnedAt.split('T')[0];
+      const learnedDate = getLocalDateString(v.learnedAt);
       getOrCreateDay(learnedDate).learned.push(v);
     }
   }
 
-  // Gruppiere geübte Vokabeln aus dem Progress-Store
+  // Gruppiere geübte Vokabeln und Hörübungen aus dem Progress-Store
   const vocabMap = new Map(vocabs.map((v) => [v.id, v]));
   for (const p of progress) {
     const day = getOrCreateDay(p.date);
@@ -258,6 +329,9 @@ export async function getCalendarActivities(): Promise<Record<string, DailyActiv
       if (v) {
         day.practiced.push(v);
       }
+    }
+    if (p.listeningSessions) {
+      day.listeningSessions = p.listeningSessions;
     }
   }
 
@@ -274,7 +348,12 @@ export async function getStreakCount(): Promise<number> {
   const activities = await getCalendarActivities();
   const activeDates = Object.keys(activities).filter((dateStr) => {
     const act = activities[dateStr];
-    return act.added.length > 0 || act.learned.length > 0 || act.practiced.length > 0;
+    return (
+      act.added.length > 0 ||
+      act.learned.length > 0 ||
+      act.practiced.length > 0 ||
+      (act.listeningSessions && act.listeningSessions.length > 0)
+    );
   });
 
   if (activeDates.length === 0) return 0;
@@ -284,10 +363,10 @@ export async function getStreakCount(): Promise<number> {
     (a, b) => new Date(b).getTime() - new Date(a).getTime()
   );
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const todayStr = getLocalDateString();
   const yesterday = new Date();
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split('T')[0];
+  const yesterdayStr = getLocalDateString(yesterday);
 
   const latestDate = sortedDates[0];
 
@@ -300,11 +379,14 @@ export async function getStreakCount(): Promise<number> {
   const currentDate = new Date(latestDate);
 
   while (true) {
-    const currentDateStr = currentDate.toISOString().split('T')[0];
+    const currentDateStr = getLocalDateString(currentDate);
     const act = activities[currentDateStr];
     if (
       act &&
-      (act.added.length > 0 || act.learned.length > 0 || act.practiced.length > 0)
+      (act.added.length > 0 ||
+        act.learned.length > 0 ||
+        act.practiced.length > 0 ||
+        (act.listeningSessions && act.listeningSessions.length > 0))
     ) {
       streak++;
       // Einen Tag zurückgehen

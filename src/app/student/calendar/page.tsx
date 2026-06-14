@@ -2,9 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, ChevronLeft, ChevronRight, Flame, Trophy, PlusCircle, CheckCircle, Award } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Flame, Trophy, PlusCircle, CheckCircle, Award, Volume2 } from "lucide-react";
 import { de } from "@/locales/de";
-import { getCalendarActivities, getStreakCount, getVocabList, Vocabulary, DailyActivity } from "@/lib/db";
+import { getCalendarActivities, getStreakCount, getVocabList, Vocabulary, DailyActivity, getLocalDateString } from "@/lib/db";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 
 export default function CalendarPage() {
@@ -17,7 +17,7 @@ export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
   
   // Heute als Vorauswahl für die Detailansicht
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = getLocalDateString();
   const [selectedDateStr, setSelectedDateStr] = useState<string>(todayStr);
 
   useEffect(() => {
@@ -361,6 +361,39 @@ export default function CalendarPage() {
                         </div>
                       </Link>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Absolvierte Hör-Übungen */}
+              {selectedDayActivity.listeningSessions && selectedDayActivity.listeningSessions.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-neutral-800/60">
+                  <h3 className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Volume2 size={14} />
+                    Absolvierte Hörverstehen-Übungen ({selectedDayActivity.listeningSessions.length})
+                  </h3>
+                  <div className="space-y-2">
+                    {selectedDayActivity.listeningSessions.map((session, idx) => {
+                      const percent = Math.round((session.correct / session.total) * 100);
+                      let timeStr = "";
+                      try {
+                        timeStr = new Date(session.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                      } catch {
+                        timeStr = "Unbekannt";
+                      }
+                      return (
+                        <div key={idx} className="p-3 bg-neutral-950 border border-neutral-850 hover:border-neutral-800 rounded-xl flex items-center justify-between transition-all">
+                          <div>
+                            <p className="text-sm font-bold text-white">Hör-Übung</p>
+                            <p className="text-[10px] text-neutral-500 mt-0.5">{timeStr} Uhr</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm font-extrabold text-amber-400">{session.correct} / {session.total} richtig</p>
+                            <p className="text-xs text-neutral-500 font-semibold">({percent}%)</p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}

@@ -186,6 +186,15 @@ export default function VocabularyListPage() {
                       ) : (
                         <Circle size={16} className="text-neutral-600 shrink-0" />
                       )}
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider shrink-0 ${
+                        item.difficulty === 'easy' 
+                          ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                          : item.difficulty === 'medium'
+                            ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                            : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                      }`}>
+                        {item.difficulty === 'easy' ? 'Einfach' : item.difficulty === 'medium' ? 'Mittel' : 'Schwer'}
+                      </span>
                     </div>
                     <p className="text-neutral-400 text-sm font-mono">
                       {item.pinyin} <span className="text-neutral-600">({item.pinyinNumber})</span>

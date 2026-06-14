@@ -84,6 +84,7 @@ export default function RequestDetailPage({ params }: Props) {
           pinyin: request.pinyin.trim(),
           pinyinNumber: request.pinyin_number?.trim() || request.pinyin.trim(),
           germanMeaning: request.german_meaning?.trim() || "",
+          difficulty: "easy",
         });
       }
 
@@ -149,6 +150,7 @@ export default function RequestDetailPage({ params }: Props) {
           pinyin: request.pinyin.trim(),
           pinyinNumber: request.pinyin_number?.trim() || request.pinyin.trim(),
           germanMeaning: request.german_meaning?.trim() || "",
+          difficulty: "easy",
         });
       }
 

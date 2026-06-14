@@ -31,6 +31,7 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
     pinyin: "",
     pinyinNumber: "",
     germanMeaning: "",
+    difficulty: "easy" as "easy" | "medium" | "hard",
   });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -45,6 +46,7 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
             pinyin: data.pinyin,
             pinyinNumber: data.pinyinNumber,
             germanMeaning: data.germanMeaning,
+            difficulty: data.difficulty || "easy",
           });
         }
       })
@@ -91,7 +93,7 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
     e.preventDefault();
     if (!vocab) return;
 
-    const { hanzi, pinyin, pinyinNumber, germanMeaning } = form;
+    const { hanzi, pinyin, pinyinNumber, germanMeaning, difficulty } = form;
     if (!hanzi.trim() || !pinyin.trim() || !pinyinNumber.trim() || !germanMeaning.trim()) {
       setError(de.vocabAdd.errorRequired);
       return;
@@ -105,6 +107,7 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
         pinyin: pinyin.trim(),
         pinyinNumber: pinyinNumber.trim(),
         germanMeaning: germanMeaning.trim(),
+        difficulty,
       };
       await updateVocab(updatedVocab);
       setVocab(updatedVocab);
@@ -266,6 +269,44 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
                 />
               </div>
 
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
+                  Schwierigkeitsgrad
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {(["easy", "medium", "hard"] as const).map((diff) => {
+                    const isActive = form.difficulty === diff;
+                    let colorClass = "";
+                    if (diff === "easy") {
+                      colorClass = isActive
+                        ? "bg-emerald-500/15 border-emerald-500 text-emerald-400 font-bold"
+                        : "bg-neutral-950 border-neutral-850 text-neutral-500 hover:text-white border-neutral-800";
+                    } else if (diff === "medium") {
+                      colorClass = isActive
+                        ? "bg-amber-500/15 border-amber-500 text-amber-400 font-bold"
+                        : "bg-neutral-950 border-neutral-850 text-neutral-500 hover:text-white border-neutral-800";
+                    } else {
+                      colorClass = isActive
+                        ? "bg-red-500/15 border-red-500 text-red-400 font-bold"
+                        : "bg-neutral-950 border-neutral-850 text-neutral-500 hover:text-white border-neutral-800";
+                    }
+
+                    const labels = { easy: "Einfach", medium: "Mittel", hard: "Schwer" };
+
+                    return (
+                      <button
+                        key={diff}
+                        type="button"
+                        onClick={() => setForm(prev => ({ ...prev, difficulty: diff }))}
+                        className={`p-2.5 rounded-xl border text-center text-xs transition-all duration-200 cursor-pointer ${colorClass}`}
+                      >
+                        {labels[diff]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="flex gap-4 pt-4">
                 <Button
                   type="button"
@@ -278,6 +319,7 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
                       pinyin: vocab.pinyin,
                       pinyinNumber: vocab.pinyinNumber,
                       germanMeaning: vocab.germanMeaning,
+                      difficulty: vocab.difficulty || "easy",
                     });
                   }}
                   disabled={saving}
@@ -318,11 +360,27 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
 
             {/* Meanings & translation details */}
             <div className="space-y-4">
-              <div>
-                <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
-                  {td.fields.germanMeaning}
-                </label>
-                <p className="text-lg font-semibold text-neutral-100">{vocab.germanMeaning}</p>
+              <div className="flex justify-between items-start gap-4">
+                <div>
+                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider">
+                    {td.fields.germanMeaning}
+                  </label>
+                  <p className="text-lg font-semibold text-neutral-100">{vocab.germanMeaning}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <label className="text-xs font-bold text-neutral-500 uppercase tracking-wider block mb-1">
+                    Schwierigkeit
+                  </label>
+                  <span className={`text-xs px-2.5 py-1 rounded-full font-bold uppercase tracking-wider ${
+                    vocab.difficulty === 'easy' 
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+                      : vocab.difficulty === 'medium'
+                        ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                        : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                  }`}>
+                    {vocab.difficulty === 'easy' ? 'Einfach' : vocab.difficulty === 'medium' ? 'Mittel' : 'Schwer'}
+                  </span>
+                </div>
               </div>
 
               {/* Status und Aktionen */}

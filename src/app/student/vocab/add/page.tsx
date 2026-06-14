@@ -19,14 +19,37 @@ export default function AddVocabularyPage() {
     pinyin: "",
     pinyinNumber: "",
     germanMeaning: "",
+    difficulty: "easy" as "easy" | "medium" | "hard",
   });
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [translating, setTranslating] = useState(false);
   const [showToneHelper, setShowToneHelper] = useState(false);
 
   // Ref to the pinyin input so we can insert at cursor position
   const pinyinRef = useRef<HTMLInputElement>(null);
+
+  const handleSuggestTranslation = async () => {
+    if (!form.hanzi.trim()) return;
+    try {
+      setTranslating(true);
+      const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(form.hanzi.trim())}&langpair=zh|de`;
+      const res = await fetch(url);
+      const json = await res.json();
+      if (json.responseData && json.responseData.translatedText) {
+        let trans = json.responseData.translatedText.trim();
+        if (trans.endsWith('.')) {
+          trans = trans.slice(0, -1);
+        }
+        setForm((prev) => ({ ...prev, germanMeaning: trans }));
+      }
+    } catch (err) {
+      console.error("Translation suggestion failed", err);
+    } finally {
+      setTranslating(false);
+    }
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -76,7 +99,7 @@ export default function AddVocabularyPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const { hanzi, pinyin, pinyinNumber, germanMeaning } = form;
+    const { hanzi, pinyin, pinyinNumber, germanMeaning, difficulty } = form;
 
     // Validation: hanzi + germanMeaning required; at least one pinyin form required
     if (!hanzi.trim() || !germanMeaning.trim() || (!pinyin.trim() && !pinyinNumber.trim())) {
@@ -91,6 +114,7 @@ export default function AddVocabularyPage() {
         pinyin: pinyin.trim(),
         pinyinNumber: pinyinNumber.trim(),
         germanMeaning: germanMeaning.trim(),
+        difficulty,
       });
       router.push("/student/vocab");
     } catch (err) {
@@ -210,9 +234,24 @@ export default function AddVocabularyPage() {
 
           {/* German meaning — required */}
           <div className="space-y-2">
-            <label htmlFor="germanMeaning" className="text-sm font-semibold text-neutral-300 block">
-              {t.germanMeaningLabel} <span className="text-emerald-500">*</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="germanMeaning" className="text-sm font-semibold text-neutral-300 block">
+                {t.germanMeaningLabel} <span className="text-emerald-500">*</span>
+              </label>
+              {form.hanzi.trim() && (
+                <button
+                  type="button"
+                  onClick={handleSuggestTranslation}
+                  disabled={translating || loading}
+                  className="text-xs text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {translating ? (
+                    <span className="w-3 h-3 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+                  ) : null}
+                  Vorschlag laden
+                </button>
+              )}
+            </div>
             <input
               type="text"
               id="germanMeaning"
@@ -223,6 +262,46 @@ export default function AddVocabularyPage() {
               className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-2xl p-4 text-white placeholder-neutral-600 transition-all outline-none"
               disabled={loading}
             />
+          </div>
+
+          {/* Schwierigkeitsgrad — required */}
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-neutral-300 block">
+              Schwierigkeitsgrad <span className="text-emerald-500">*</span>
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["easy", "medium", "hard"] as const).map((diff) => {
+                const isActive = form.difficulty === diff;
+                let colorClass = "";
+                if (diff === "easy") {
+                  colorClass = isActive
+                    ? "bg-emerald-500/10 border-emerald-500 text-emerald-400 font-bold"
+                    : "bg-neutral-950 border-neutral-850 text-neutral-500 hover:text-white border-neutral-800";
+                } else if (diff === "medium") {
+                  colorClass = isActive
+                    ? "bg-amber-500/10 border-amber-500 text-amber-400 font-bold"
+                    : "bg-neutral-950 border-neutral-850 text-neutral-500 hover:text-white border-neutral-800";
+                } else {
+                  colorClass = isActive
+                    ? "bg-red-500/10 border-red-500 text-red-400 font-bold"
+                    : "bg-neutral-950 border-neutral-850 text-neutral-500 hover:text-white border-neutral-800";
+                }
+
+                const labels = { easy: "Einfach", medium: "Mittel", hard: "Schwer" };
+
+                return (
+                  <button
+                    key={diff}
+                    type="button"
+                    onClick={() => setForm(prev => ({ ...prev, difficulty: diff }))}
+                    className={`p-3.5 rounded-2xl border text-center text-sm transition-all duration-200 cursor-pointer ${colorClass}`}
+                    disabled={loading}
+                  >
+                    {labels[diff]}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Required fields note */}
