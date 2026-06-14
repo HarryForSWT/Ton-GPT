@@ -35,6 +35,14 @@ export default function VocabPodcastPage() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const activeUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
+  const isPlayingRef = useRef(isPlaying);
+  const sequenceIdRef = useRef(0);
+
+  // Sync isPlayingRef with isPlaying state
+  useEffect(() => {
+    isPlayingRef.current = isPlaying;
+  }, [isPlaying]);
+
   // 1. Initial Load of Vocabulary & Voices
   useEffect(() => {
     getVocabList()
@@ -111,6 +119,7 @@ export default function VocabPodcastPage() {
   const stopAllPlayback = () => {
     setIsPlaying(false);
     setPhase("idle");
+    sequenceIdRef.current++; // Invalidate any active sequence callbacks
     clearTimers();
     if (typeof window !== "undefined" && window.speechSynthesis) {
       window.speechSynthesis.cancel();
@@ -132,6 +141,7 @@ export default function VocabPodcastPage() {
       audioRef.current = null;
     }
 
+    const seqId = ++sequenceIdRef.current;
     const currentWord = filteredList[currentIndex];
     if (!currentWord) return;
 
@@ -147,24 +157,26 @@ export default function VocabPodcastPage() {
         audioRef.current = audio;
         audio.onended = () => {
           URL.revokeObjectURL(url);
-          triggerPausePhase();
+          if (seqId !== sequenceIdRef.current || !isPlayingRef.current) return;
+          triggerPausePhase(seqId);
         };
         audio.onerror = () => {
           URL.revokeObjectURL(url);
-          speakChineseTTS(currentWord.hanzi);
+          if (seqId !== sequenceIdRef.current || !isPlayingRef.current) return;
+          speakChineseTTS(currentWord.hanzi, seqId);
         };
         await audio.play();
       } else {
-        speakChineseTTS(currentWord.hanzi);
+        speakChineseTTS(currentWord.hanzi, seqId);
       }
     } catch {
-      speakChineseTTS(currentWord.hanzi);
+      speakChineseTTS(currentWord.hanzi, seqId);
     }
   };
 
-  const speakChineseTTS = (text: string) => {
+  const speakChineseTTS = (text: string, seqId: number) => {
     if (typeof window === "undefined" || !window.speechSynthesis) {
-      triggerPausePhase();
+      triggerPausePhase(seqId);
       return;
     }
     const u = new SpeechSynthesisUtterance(text);
@@ -173,17 +185,19 @@ export default function VocabPodcastPage() {
     
     u.rate = 0.6 * playbackSpeed;
     u.onend = () => {
-      triggerPausePhase();
+      if (seqId !== sequenceIdRef.current || !isPlayingRef.current) return;
+      triggerPausePhase(seqId);
     };
     u.onerror = () => {
-      triggerPausePhase();
+      if (seqId !== sequenceIdRef.current || !isPlayingRef.current) return;
+      triggerPausePhase(seqId);
     };
     activeUtteranceRef.current = u;
     window.speechSynthesis.speak(u);
   };
 
   // Phase 2: Repeat Pause Countdown
-  const triggerPausePhase = () => {
+  const triggerPausePhase = (seqId: number) => {
     setPhase("pause");
     setCountdown(pauseDuration);
 
@@ -191,11 +205,15 @@ export default function VocabPodcastPage() {
     const intervalTime = 100; // tick every 100ms for smooth UI updates
     
     intervalRef.current = setInterval(() => {
+      if (seqId !== sequenceIdRef.current || !isPlayingRef.current) {
+        clearInterval(intervalRef.current!);
+        return;
+      }
       timeLeft -= 0.1;
       if (timeLeft <= 0) {
         clearInterval(intervalRef.current!);
         setCountdown(0);
-        triggerGermanPhase();
+        triggerGermanPhase(seqId);
       } else {
         setCountdown(Math.max(0, parseFloat(timeLeft.toFixed(1))));
       }
@@ -203,13 +221,13 @@ export default function VocabPodcastPage() {
   };
 
   // Phase 3: German Translation
-  const triggerGermanPhase = () => {
+  const triggerGermanPhase = (seqId: number) => {
     setPhase("german");
     const currentWord = filteredList[currentIndex];
     if (!currentWord) return;
 
     if (typeof window === "undefined" || !window.speechSynthesis) {
-      triggerDelayPhase();
+      triggerDelayPhase(seqId);
       return;
     }
 
@@ -219,19 +237,22 @@ export default function VocabPodcastPage() {
     
     u.rate = 0.95 * playbackSpeed;
     u.onend = () => {
-      triggerDelayPhase();
+      if (seqId !== sequenceIdRef.current || !isPlayingRef.current) return;
+      triggerDelayPhase(seqId);
     };
     u.onerror = () => {
-      triggerDelayPhase();
+      if (seqId !== sequenceIdRef.current || !isPlayingRef.current) return;
+      triggerDelayPhase(seqId);
     };
     activeUtteranceRef.current = u;
     window.speechSynthesis.speak(u);
   };
 
   // Phase 4: Delay before next word
-  const triggerDelayPhase = () => {
+  const triggerDelayPhase = (seqId: number) => {
     setPhase("delay");
     timeoutRef.current = setTimeout(() => {
+      if (seqId !== sequenceIdRef.current || !isPlayingRef.current) return;
       handleNextWord();
     }, 1500 / playbackSpeed);
   };
@@ -268,7 +289,7 @@ export default function VocabPodcastPage() {
     setIsPlaying(prev => !prev);
   };
 
-  const currentWord = filteredList[currentIndex];
+  const currentWord = filteredList[currentIndex] || null;
 
   if (loading) {
     return (
@@ -395,7 +416,7 @@ export default function VocabPodcastPage() {
                 >
                   {/* Center label */}
                   <div className="w-12 h-12 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-xl font-bold text-purple-300">
-                    {currentWord.hanzi.charAt(0)}
+                    {currentWord ? currentWord.hanzi.charAt(0) : ""}
                   </div>
                 </div>
 
@@ -426,17 +447,17 @@ export default function VocabPodcastPage() {
                   {phase === "idle" && "Startbereit"}
                 </div>
                 <h2 className="text-3xl font-extrabold text-white tracking-wide">
-                  {currentWord.hanzi}
+                  {currentWord?.hanzi || ""}
                 </h2>
                 <div className="font-mono text-sm text-neutral-400">
-                  {currentWord.pinyin}
+                  {currentWord?.pinyin || ""}
                 </div>
                 
                 {/* Reveal meaning depending on stage, or show faded if waiting */}
                 <div className={`text-base font-semibold text-purple-300 transition-all duration-300 ${
                   phase === "german" || phase === "delay" || phase === "idle" ? "opacity-100 scale-100" : "opacity-0 scale-95"
                 }`}>
-                  {currentWord.germanMeaning}
+                  {currentWord?.germanMeaning || ""}
                 </div>
               </div>
 
