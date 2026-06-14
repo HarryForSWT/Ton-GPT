@@ -12,6 +12,8 @@ Eine Progressive Web App zum Üben und Bewerten chinesischer Tonaussprache. Sch�
 - **Übungskalender** — Tägliche Übungsaktivität im Kalender-Heatmap
 - **Lehrer-Bewertung beantragen** — Direkt von der Vokabelseite aus eine Bewertung anfragen
 - **TTS-Vorleser** — Chinesische Wörter mit nativer Mandarin-Stimme vorlesen lassen
+- **Swipe-Spiel** — Spielerisches Üben der Töne mit visuellem (Farben) und auditivem Feedback
+- **E-Mail-Erinnerungen** — Optional stündliche oder tägliche Benachrichtigungen über offene Übungen (via Resend)
 - **Passwort ändern** — Eigenes Passwort in den Einstellungen ändern
 - **Passwort vergessen** — Anfrage an den Lehrer senden, der das Passwort zurücksetzt
 
@@ -38,7 +40,9 @@ Eine Progressive Web App zum Üben und Bewerten chinesischer Tonaussprache. Sch�
 | [Tailwind CSS v4](https://tailwindcss.com) | Styling |
 | [Supabase](https://supabase.com) | Auth & Datenbank |
 | [IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API) (via `idb`) | Lokale Audio-Speicherung |
-| [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API) | Pitch-Analyse |
+| [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API) | Pitch-Analyse & Audio-Feedback |
+| [Resend](https://resend.com) | E-Mail-Versand (Erinnerungen) |
+| [cron-job.org](https://cron-job.org) | Automatisierung / Cronjobs |
 | [Serwist](https://serwist.pages.dev) | Service Worker / PWA |
 | [pinyin-pro](https://github.com/zh-lx/pinyin-pro) | Pinyin-Generierung |
 
@@ -64,9 +68,12 @@ Erstelle eine `.env.local` Datei:
 NEXT_PUBLIC_SUPABASE_URL=https://dein-projekt.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=dein-anon-key
 SUPABASE_SERVICE_ROLE_KEY=dein-service-role-key
+RESEND_API_KEY=dein-resend-key
+CRON_SECRET=dein-sicheres-passwort
 ```
 
-> **Hinweis:** Der `SUPABASE_SERVICE_ROLE_KEY` wird für Admin-Funktionen benötigt (Passwort-Reset, Lehrer-Registrierung). Findest du unter Supabase Dashboard → Settings → API → `service_role`.
+> **Hinweis:** Der `SUPABASE_SERVICE_ROLE_KEY` wird für Admin-Funktionen benötigt (Passwort-Reset, Lehrer-Registrierung).
+> **Cronjobs:** Die Route `/api/cron/hourly-email` muss regelmäßig (z. B. über cron-job.org) mit dem Header `Authorization: Bearer <CRON_SECRET>` aufgerufen werden.
 
 ### Datenbank-Migration
 
@@ -136,7 +143,8 @@ src/
 │   │   ├── vocab/            # Vokabelliste, Detail, Hinzufügen
 │   │   ├── requests/         # Bewertungsanfragen (Liste, Neu, Detail)
 │   │   ├── calendar/         # Übungskalender
-│   │   └── settings/         # Passwort ändern
+│   │   ├── practice/         # Übungsspiele (z.B. Swipe)
+│   │   └── settings/         # Passwort ändern, CSV Import/Export
 │   └── teacher/
 │       └── request/          # Anfragen-Dashboard & Bewertung
 │                             # + Schülerverwaltung & Admin-Funktionen
