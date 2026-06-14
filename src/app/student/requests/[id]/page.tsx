@@ -63,8 +63,9 @@ export default function RequestDetailPage({ params }: Props) {
   const [teacherBlob, setTeacherBlob] = useState<{ blob: Blob; mimeType: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [savingRef, setSavingRef] = useState(false);
-  const [refSavedMsg, setRefSavedMsg] = useState("");
   const [localVocabId, setLocalVocabId] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [targetVocabId, setTargetVocabId] = useState<string | null>(null);
 
   const handleSaveAsReference = async () => {
     if (!request || !teacherBlob) return;
@@ -111,11 +112,8 @@ export default function RequestDetailPage({ params }: Props) {
       // Nach lokalem Speichern: Cloud-Daten löschen (Local-First)
       await deletePronunciationRequest(request.id, request.student_audio_url, response?.audio_url || null);
 
-      setRefSavedMsg(de.toneAnalyser.saveReferenceSuccess);
-      setTimeout(() => {
-        setRefSavedMsg("");
-        router.push("/student/requests");
-      }, 1500);
+      setTargetVocabId(vocabId);
+      setShowSuccessModal(true);
     } catch (err) {
       console.error("Fehler beim Speichern der Referenz:", err);
     } finally {
@@ -396,17 +394,55 @@ export default function RequestDetailPage({ params }: Props) {
                     </svg>
                     {savingRef ? "Wird gespeichert..." : de.toneAnalyser.saveReferenceBtn}
                   </button>
-
-                  {refSavedMsg && (
-                    <p className="text-xs text-emerald-400 text-center font-semibold animate-in fade-in">
-                      ✓ {refSavedMsg}
-                    </p>
-                  )}
                 </div>
               )}
             </div>
           )}
         </div>
+
+        {/* Erfolgs-Modal */}
+        {showSuccessModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-3xl p-6 shadow-2xl space-y-6 text-center animate-in zoom-in-95 duration-200">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400">
+                <CheckCircle2 size={24} />
+              </div>
+              
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-white">Referenz gespeichert!</h3>
+                <p className="text-neutral-400 text-sm leading-relaxed">
+                  Die Lehrer-Aufnahme wurde erfolgreich als Ton-Referenz für das Wort <span className="text-emerald-400 font-bold">&quot;{request.hanzi}&quot;</span> lokal gesichert.
+                </p>
+                <p className="text-neutral-500 text-xs leading-relaxed">
+                  Möchtest du direkt zur Vokabel-Seite gehen, um das Wort anzusehen?
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSuccessModal(false);
+                    router.push("/student/requests");
+                  }}
+                  className="flex-1 py-3 px-4 bg-neutral-800 border border-neutral-700 hover:bg-neutral-750 text-neutral-300 hover:text-white rounded-xl transition-all font-bold text-xs cursor-pointer"
+                >
+                  Nein, ich bleibe hier
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowSuccessModal(false);
+                    router.push(`/student/vocab/${targetVocabId}`);
+                  }}
+                  className="flex-1 py-3 px-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl transition-all font-bold text-xs shadow-lg shadow-emerald-500/10 cursor-pointer"
+                >
+                  Ja, bitte
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

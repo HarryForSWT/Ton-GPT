@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, Search, Plus, CheckCircle, Circle, BookOpen, Trash2 } from "lucide-react";
-import { getVocabList, deleteVocab, Vocabulary } from "@/lib/db";
+import { ArrowLeft, Search, Plus, CheckCircle, Circle, BookOpen, Trash2, Headphones } from "lucide-react";
+import { getVocabList, deleteVocab, Vocabulary, getLocalDateString } from "@/lib/db";
 import { de } from "@/locales/de";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 
@@ -13,7 +13,7 @@ export default function VocabularyListPage() {
   const [vocabList, setVocabList] = useState<Vocabulary[]>([]);
   const [mounted, setMounted] = useState(false);
   const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<"all" | "learned" | "unlearned">("all");
+  const [filter, setFilter] = useState<"all" | "learned" | "unlearned" | "srs">("all");
 
   useEffect(() => {
     setMounted(true);
@@ -62,7 +62,8 @@ export default function VocabularyListPage() {
     const matchesFilter =
       filter === "all" ||
       (filter === "learned" && item.learned) ||
-      (filter === "unlearned" && !item.learned);
+      (filter === "unlearned" && !item.learned) ||
+      (filter === "srs" && getLocalDateString(item.nextReviewAt) <= getLocalDateString());
 
     return matchesSearch && matchesFilter;
   });
@@ -97,12 +98,18 @@ export default function VocabularyListPage() {
             <ThemeSwitcher />
           </div>
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
           <div className="hidden md:block">
             <ThemeSwitcher />
           </div>
-          <Link href="/student/vocab/add" className="w-full md:w-auto">
-            <button className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white px-5 py-3 rounded-2xl transition-all font-semibold shadow-lg shadow-emerald-500/10 w-full md:w-auto cursor-pointer">
+          <Link href="/student/podcast" className="w-full sm:w-auto">
+            <button className="flex items-center justify-center gap-2 bg-neutral-900 hover:bg-neutral-800 border border-neutral-800 active:scale-95 text-purple-400 px-5 py-3 rounded-2xl transition-all font-semibold w-full sm:w-auto cursor-pointer">
+              <Headphones size={18} />
+              Podcast
+            </button>
+          </Link>
+          <Link href="/student/vocab/add" className="w-full sm:w-auto">
+            <button className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white px-5 py-3 rounded-2xl transition-all font-semibold shadow-lg shadow-emerald-500/10 w-full sm:w-auto cursor-pointer">
               <Plus size={18} />
               {t.addWordBtn}
             </button>
@@ -111,7 +118,7 @@ export default function VocabularyListPage() {
       </header>
 
       {/* Search and Filters */}
-      <div className="max-w-4xl mx-auto mb-6 flex flex-col sm:flex-row gap-4 relative z-10">
+      <div className="max-w-4xl mx-auto mb-6 flex flex-col md:flex-row gap-4 relative z-10">
         <div className="flex-1 relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" size={18} />
           <input
@@ -122,7 +129,7 @@ export default function VocabularyListPage() {
             className="w-full bg-neutral-900/80 border border-neutral-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-2xl py-3 pl-12 pr-4 text-white placeholder-neutral-500 transition-all outline-none"
           />
         </div>
-        <div className="flex bg-neutral-900/80 p-1 border border-neutral-800 rounded-2xl">
+        <div className="flex bg-neutral-900/80 p-1 border border-neutral-800 rounded-2xl overflow-x-auto max-w-full whitespace-nowrap scrollbar-none">
           <button
             onClick={() => setFilter("all")}
             className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
@@ -132,6 +139,16 @@ export default function VocabularyListPage() {
             }`}
           >
             Alle ({vocabList.length})
+          </button>
+          <button
+            onClick={() => setFilter("srs")}
+            className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+              filter === "srs"
+                ? "bg-purple-500/15 text-purple-400 font-bold border border-purple-500/25"
+                : "text-neutral-400 hover:text-white"
+            }`}
+          >
+            Fällig (SRS) ({vocabList.filter((v) => getLocalDateString(v.nextReviewAt) <= getLocalDateString()).length})
           </button>
           <button
             onClick={() => setFilter("learned")}

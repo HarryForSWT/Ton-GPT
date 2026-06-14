@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, ChevronLeft, ChevronRight, Flame, Trophy, PlusCircle, CheckCircle, Award, Volume2 } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, Flame, Trophy, PlusCircle, CheckCircle, Award, Volume2, Gamepad2 } from "lucide-react";
 import { de } from "@/locales/de";
 import { getCalendarActivities, getStreakCount, getVocabList, Vocabulary, DailyActivity, getLocalDateString } from "@/lib/db";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
@@ -365,16 +365,17 @@ export default function CalendarPage() {
                 </div>
               )}
 
-              {/* Absolvierte Hör-Übungen */}
+              {/* Absolvierte Hör-Übungen & Spiele */}
               {selectedDayActivity.listeningSessions && selectedDayActivity.listeningSessions.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-neutral-800/60">
-                  <h3 className="text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                    <Volume2 size={14} />
-                    Absolvierte Hörverstehen-Übungen ({selectedDayActivity.listeningSessions.length})
+                  <h3 className="text-xs font-semibold text-purple-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <Gamepad2 size={14} />
+                    Absolvierte Spiele & Übungen ({selectedDayActivity.listeningSessions.length})
                   </h3>
                   <div className="space-y-2">
                     {selectedDayActivity.listeningSessions.map((session, idx) => {
                       const percent = Math.round((session.correct / session.total) * 100);
+                      const isToneGame = session.type === 'tone';
                       let timeStr = "";
                       try {
                         timeStr = new Date(session.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -383,12 +384,17 @@ export default function CalendarPage() {
                       }
                       return (
                         <div key={idx} className="p-3 bg-neutral-950 border border-neutral-850 hover:border-neutral-800 rounded-xl flex items-center justify-between transition-all">
-                          <div>
-                            <p className="text-sm font-bold text-white">Hör-Übung</p>
-                            <p className="text-[10px] text-neutral-500 mt-0.5">{timeStr} Uhr</p>
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${isToneGame ? 'bg-pink-500/10 text-pink-400' : 'bg-amber-500/10 text-amber-400'}`}>
+                              {isToneGame ? <Gamepad2 size={16} /> : <Volume2 size={16} />}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white">{isToneGame ? 'Töne bestimmen' : 'Hör-Übung'}</p>
+                              <p className="text-[10px] text-neutral-500 mt-0.5">{timeStr} Uhr</p>
+                            </div>
                           </div>
                           <div className="text-right">
-                            <p className="text-sm font-extrabold text-amber-400">{session.correct} / {session.total} richtig</p>
+                            <p className={`text-sm font-extrabold ${isToneGame ? 'text-pink-400' : 'text-amber-400'}`}>{session.correct} / {session.total} richtig</p>
                             <p className="text-xs text-neutral-500 font-semibold">({percent}%)</p>
                           </div>
                         </div>

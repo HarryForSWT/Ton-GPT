@@ -8,7 +8,7 @@ import { addVocab } from "@/lib/db";
 import { de } from "@/locales/de";
 import { Button } from "@/components/ui/Button";
 import { ToneHelper } from "@/components/ui/ToneHelper";
-import { suggestPinyin, pinyinNumberToSymbol, pinyinSymbolToNumber } from "@/lib/pinyinConverter";
+import { suggestPinyin, pinyinNumberToSymbol, pinyinSymbolToNumber, checkToneSandhi } from "@/lib/pinyinConverter";
 
 export default function AddVocabularyPage() {
   const router = useRouter();
@@ -29,6 +29,9 @@ export default function AddVocabularyPage() {
 
   // Ref to the pinyin input so we can insert at cursor position
   const pinyinRef = useRef<HTMLInputElement>(null);
+
+  // Compute Sandhi Warnings live
+  const sandhiWarnings = checkToneSandhi(form.pinyin || form.pinyinNumber);
 
   const handleSuggestTranslation = async () => {
     if (!form.hanzi.trim()) return;
@@ -231,6 +234,22 @@ export default function AddVocabularyPage() {
               disabled={loading}
             />
           </div>
+
+          {/* Tone Sandhi live warning alert */}
+          {sandhiWarnings.length > 0 && (
+            <div className="p-4 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-2xl text-xs space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+              <div className="flex items-center gap-2 font-bold text-amber-400">
+                <Info size={14} className="shrink-0" />
+                <span>Aussprache-Hinweis (Ton-Sandhi):</span>
+              </div>
+              {sandhiWarnings.map((warn, idx) => (
+                <p key={idx} className="leading-relaxed pl-5 relative">
+                  <span className="absolute left-1.5 top-1.5 w-1 h-1 rounded-full bg-amber-400/70" />
+                  {warn}
+                </p>
+              ))}
+            </div>
+          )}
 
           {/* German meaning — required */}
           <div className="space-y-2">

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/Button";
 import { AudioControls } from "@/components/audio/AudioControls";
 import { ToneAnalyser } from "@/components/audio/ToneAnalyser";
 import { MandarinTTSPlayer } from "@/components/audio/MandarinTTSPlayer";
+import { checkToneSandhi, suggestPinyin, pinyinNumberToSymbol, pinyinSymbolToNumber } from "@/lib/pinyinConverter";
 
 interface VocabularyDetailPageProps {
   params: Promise<{ id: string }>;
@@ -35,6 +36,9 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
   });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+
+  // Compute Sandhi Warnings live
+  const sandhiWarnings = checkToneSandhi(form.pinyin || form.pinyinNumber);
 
   useEffect(() => {
     getVocabById(id)
@@ -85,7 +89,23 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
 
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    
+    setForm((prev) => {
+      const updated = { ...prev, [name]: value };
+      
+      if (name === "hanzi") {
+        const suggestions = suggestPinyin(value);
+        updated.pinyin = suggestions.pinyinSymbol;
+        updated.pinyinNumber = suggestions.pinyinNumber;
+      } else if (name === "pinyin") {
+        updated.pinyinNumber = pinyinSymbolToNumber(value);
+      } else if (name === "pinyinNumber") {
+        updated.pinyin = pinyinNumberToSymbol(value);
+      }
+      
+      return updated;
+    });
+
     if (error) setError("");
   };
 
@@ -254,6 +274,22 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
                   />
                 </div>
               </div>
+
+              {/* Tone Sandhi live warning alert */}
+              {sandhiWarnings.length > 0 && (
+                <div className="p-4 bg-amber-500/10 border border-amber-500/20 text-amber-300 rounded-2xl text-xs space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                  <div className="flex items-center gap-2 font-bold text-amber-400">
+                    <Info size={14} className="shrink-0" />
+                    <span>Aussprache-Hinweis (Ton-Sandhi):</span>
+                  </div>
+                  {sandhiWarnings.map((warn, idx) => (
+                    <p key={idx} className="leading-relaxed pl-5 relative text-left">
+                      <span className="absolute left-1.5 top-1.5 w-1 h-1 rounded-full bg-amber-400/70" />
+                      {warn}
+                    </p>
+                  ))}
+                </div>
+              )}
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">

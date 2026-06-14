@@ -22,8 +22,15 @@ export default function NewRequestPage() {
 
   const [vocabList, setVocabList] = useState<Vocabulary[]>([]);
   const [selectedVocabId, setSelectedVocabId] = useState<string>("");
+  const [vocabSearch, setVocabSearch] = useState("");
   const [manualHanzi, setManualHanzi] = useState("");
   const [manualPinyin, setManualPinyin] = useState("");
+
+  const filteredVocabs = vocabList.filter(v =>
+    v.hanzi.toLowerCase().includes(vocabSearch.toLowerCase()) ||
+    v.germanMeaning.toLowerCase().includes(vocabSearch.toLowerCase()) ||
+    (v.pinyin || "").toLowerCase().includes(vocabSearch.toLowerCase())
+  );
   const [manualMeaning, setManualMeaning] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -151,20 +158,32 @@ export default function NewRequestPage() {
 
           {/* Vokabel aus Liste wählen */}
           {vocabList.length > 0 && (
-            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5">
-              <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider block mb-3">
+            <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 space-y-3">
+              <label className="text-xs font-bold text-neutral-400 uppercase tracking-wider block">
                 {t.selectWordLabel}
               </label>
+              
+              {/* Vokabel-Filter-Eingabe */}
+              <input
+                type="text"
+                placeholder="Vokabel suchen (Hanzi, Bedeutung, Pinyin)..."
+                value={vocabSearch}
+                onChange={(e) => setVocabSearch(e.target.value)}
+                className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-3 py-2.5 text-sm text-neutral-200 outline-none transition-all placeholder-neutral-600 focus:ring-1 focus:ring-emerald-500/30"
+              />
+
               <div className="relative">
                 <select
                   value={selectedVocabId}
                   onChange={handleVocabSelect}
                   className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl px-4 py-3 text-white appearance-none outline-none pr-10 transition-all"
                 >
-                  <option value="">{t.selectWordPlaceholder}</option>
-                  {vocabList.map((v) => (
+                  <option value="">
+                    {vocabSearch ? `Gefundene Wörter (${filteredVocabs.length})` : t.selectWordPlaceholder}
+                  </option>
+                  {filteredVocabs.map((v) => (
                     <option key={v.id} value={v.id}>
-                      {v.hanzi} — {v.germanMeaning}
+                      {v.hanzi} — {v.germanMeaning} {v.pinyin ? `(${v.pinyin})` : ""}
                     </option>
                   ))}
                 </select>

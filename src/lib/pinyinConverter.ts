@@ -88,19 +88,41 @@ function addToneToSyllable(syllable: string, tone: number): string {
  * Konvertiert Pinyin mit Ton-Nummern (z.B. "ni3hao3") in Pinyin mit Akzenten (z.B. "nǐhǎo").
  */
 export function pinyinNumberToSymbol(pinyinNum: string): string {
-  return pinyinNum.replace(/([a-zA-ZüÜvV]+)([1-5])/g, (match, syllable, toneStr) => {
-    const tone = parseInt(toneStr, 10);
-    return addToneToSyllable(syllable, tone);
-  });
+  if (!pinyinNum) return "";
+  let current = pinyinNum.normalize("NFC");
+  const regex = /([a-zA-ZüÜvV]+)([0-5])/g;
+
+  while (/[0-5]/.test(current)) {
+    const next = current.replace(regex, (match, syllable, toneStr) => {
+      const tone = parseInt(toneStr, 10);
+      return addToneToSyllable(syllable, tone);
+    });
+    if (next === current) {
+      break; // Avoid infinite loop if there's a digit not preceded by a letter (e.g., "3")
+    }
+    current = next;
+  }
+  return current;
 }
 
 /**
  * Konvertiert Pinyin mit Akzenten (z.B. "nǐhǎo") in Pinyin mit Ton-Nummern (z.B. "ni3hao3").
  */
 export function pinyinSymbolToNumber(pinyinSym: string): string {
+  if (!pinyinSym) return "";
+  
+  // Normalize string to Unicode NFC format
+  let normalizedSym = pinyinSym.normalize("NFC");
+
+  // If the string already contains any digit 0-5, convert it to standard symbol format first
+  // to avoid incorrect syllable splitting and double-digit tone generation.
+  if (/[0-5]/.test(normalizedSym)) {
+    normalizedSym = pinyinNumberToSymbol(normalizedSym);
+  }
+
   const pinyinSyllableRegex = /(zh|ch|sh|[bpmfdtnlgkhjqxrzcs])?([yw])?([āáǎàaēéěèeoōóǒòoiīíǐìiuūúǔùuüǖǘǚǜv]+)(ng|n|r)?/gi;
 
-  return pinyinSym.replace(pinyinSyllableRegex, (match, initial = '', semivowel = '', vowels = '', ending = '') => {
+  return normalizedSym.replace(pinyinSyllableRegex, (match, initial = '', semivowel = '', vowels = '', ending = '') => {
     let tone = 5;
     let cleanVowels = '';
 
@@ -143,3 +165,71 @@ export function suggestPinyin(hanzi: string): { pinyinSymbol: string; pinyinNumb
     return { pinyinSymbol: "", pinyinNumber: "" };
   }
 }
+
+interface SandhiSyllable {
+  raw: string;
+  text: string;
+  tone: number;
+}
+
+/**
+  * Analysiert Pinyin auf Ton-Sandhi Regeln und gibt ein Array mit Hinweistexten zurück.
+  */
+export function checkToneSandhi(pinyinStr: string): string[] {
+  if (!pinyinStr) return [];
+
+  // Konvertiere in Nummer-Schreibweise zur einfachen Analyse
+  const normalized = pinyinSymbolToNumber(pinyinStr);
+  const matches = normalized.toLowerCase().replace(/ü/g, 'v').match(/[a-z]+[1-5]/g) || [];
+  
+  const syllables: SandhiSyllable[] = matches.map(s => {
+    const tone = parseInt(s.slice(-1), 10);
+    const text = s.slice(0, -1);
+    return { raw: s, text, tone };
+  });
+
+  const warnings: string[] = [];
+
+  for (let i = 0; i < syllables.length; i++) {
+    const current = syllables[i];
+    const next = syllables[i + 1];
+
+    // 1. 3-3 Ton-Sandhi (Zwei aufeinanderfolgende 3. Töne)
+    if (next && current.tone === 3 && next.tone === 3) {
+      const currentSym = pinyinNumberToSymbol(current.raw);
+      const nextSym = pinyinNumberToSymbol(next.raw);
+      const changedSym = pinyinNumberToSymbol(current.text + "2");
+      warnings.push(
+        `3-3 Ton-Sandhi: Zwei aufeinanderfolgende 3. Töne („${currentSym} ${nextSym}“). Der erste 3. Ton wird in der Aussprache als 2. Ton („${changedSym}“) ausgesprochen.`
+      );
+    }
+
+    // 2. bù-Sandhi (bù + 4. Ton)
+    if (next && current.text === "bu" && current.tone === 4 && next.tone === 4) {
+      const nextSym = pinyinNumberToSymbol(next.raw);
+      const changedSym = pinyinNumberToSymbol("bu2");
+      warnings.push(
+        `„bù“-Sandhi: Das Wort „bù“ (4. Ton) wird vor einem weiteren 4. Ton (z.B. „${nextSym}“) als 2. Ton („${changedSym}“, „bú“) ausgesprochen.`
+      );
+    }
+
+    // 3. yī-Sandhi (yī + Ton)
+    if (next && current.text === "yi" && current.tone === 1) {
+      const nextSym = pinyinNumberToSymbol(next.raw);
+      if (next.tone === 4) {
+        const changedSym = pinyinNumberToSymbol("yi2");
+        warnings.push(
+          `„yī“-Sandhi: Das Wort „yī“ (1. Ton) wird vor einem 4. Ton (z.B. „${nextSym}“) als 2. Ton („${changedSym}“, „yí“) ausgesprochen.`
+        );
+      } else if (next.tone === 1 || next.tone === 2 || next.tone === 3) {
+        const changedSym = pinyinNumberToSymbol("yi4");
+        warnings.push(
+          `„yī“-Sandhi: Das Wort „yī“ (1. Ton) wird vor einem 1., 2. oder 3. Ton (z.B. „${nextSym}“) als 4. Ton („${changedSym}“, „yì“) ausgesprochen.`
+        );
+      }
+    }
+  }
+
+  return warnings;
+}
+

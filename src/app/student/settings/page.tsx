@@ -1,10 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import Link from "next/link";
-import { ArrowLeft, Lock, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Lock, Eye, EyeOff, Download, Upload, CheckCircle2, AlertTriangle } from "lucide-react";
 import { de } from "@/locales/de";
 import { createClient } from "@/utils/supabase/client";
+import { getVocabList, importVocab, Vocabulary } from "@/lib/db";
 
 export default function StudentSettings() {
   const t = de.settings;
@@ -16,6 +17,218 @@ export default function StudentSettings() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
+
+  // ─── CSV Backup States ───────────────────────────────────────────────────
+  const [backupMessage, setBackupMessage] = useState("");
+  const [backupIsError, setBackupIsError] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Helper to escape CSV values
+  function escapeCSV(val: string | number | boolean | undefined | null): string {
+    if (val === undefined || val === null) return "";
+    const str = String(val);
+    if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
+      return `"${str.replace(/"/g, '""')}"`;
+    }
+    return str;
+  }
+
+  // Export vocabulary list to CSV file
+  async function handleExportCSV() {
+    setBackupMessage("");
+    setBackupIsError(false);
+    try {
+      const list = await getVocabList();
+      if (list.length === 0) {
+        setBackupMessage("Du hast noch keine Vokabeln zum Exportieren.");
+        setBackupIsError(true);
+        return;
+      }
+
+      const headers = [
+        "id",
+        "hanzi",
+        "pinyin",
+        "pinyinNumber",
+        "germanMeaning",
+        "createdAt",
+        "learned",
+        "bestScore",
+        "difficulty",
+        "learnedAt",
+        "lastPracticedAt",
+        "teacherAudioId",
+        "teacherAudioLocalPath"
+      ];
+
+      const csvRows = [headers.join(",")];
+
+      for (const item of list) {
+        const row = [
+          escapeCSV(item.id),
+          escapeCSV(item.hanzi),
+          escapeCSV(item.pinyin),
+          escapeCSV(item.pinyinNumber),
+          escapeCSV(item.germanMeaning),
+          escapeCSV(item.createdAt),
+          escapeCSV(item.learned),
+          escapeCSV(item.bestScore),
+          escapeCSV(item.difficulty),
+          escapeCSV(item.learnedAt),
+          escapeCSV(item.lastPracticedAt),
+          escapeCSV(item.teacherAudioId),
+          escapeCSV(item.teacherAudioLocalPath)
+        ];
+        csvRows.push(row.join(","));
+      }
+
+      const csvContent = "\uFEFF" + csvRows.join("\n"); // Add BOM for Excel compatibility
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `ton-gpt-vokabeln-${new Date().toISOString().split("T")[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      setBackupMessage(`Erfolgreich ${list.length} Vokabeln exportiert!`);
+      setBackupIsError(false);
+    } catch (err) {
+      console.error(err);
+      setBackupMessage("Fehler beim Exportieren der Vokabeln.");
+      setBackupIsError(true);
+    }
+  }
+
+  // Parse CSV row respecting double quotes
+  function parseCSVRow(row: string): string[] {
+    const fields: string[] = [];
+    let currentField = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < row.length; i++) {
+      const char = row[i];
+      if (char === '"') {
+        if (inQuotes && row[i + 1] === '"') {
+          currentField += '"';
+          i++; // skip next quote
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === "," && !inQuotes) {
+        fields.push(currentField);
+        currentField = "";
+      } else {
+        currentField += char;
+      }
+    }
+    fields.push(currentField);
+    return fields;
+  }
+
+  // Parse whole CSV content
+  function parseCSV(text: string): Record<string, string>[] {
+    const cleanedText = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    const lines: string[] = [];
+    let currentLine = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < cleanedText.length; i++) {
+      const char = cleanedText[i];
+      if (char === '"') {
+        inQuotes = !inQuotes;
+        currentLine += char;
+      } else if (char === "\n" && !inQuotes) {
+        lines.push(currentLine);
+        currentLine = "";
+      } else {
+        currentLine += char;
+      }
+    }
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    if (lines.length <= 1) return [];
+
+    const headers = parseCSVRow(lines[0]);
+    const results: Record<string, string>[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const rowValues = parseCSVRow(lines[i]);
+      if (rowValues.length === 0 || (rowValues.length === 1 && rowValues[0] === "")) continue;
+      
+      const obj: Record<string, string> = {};
+      headers.forEach((header, index) => {
+        const cleanHeader = header.replace(/^\uFEFF/, "").trim();
+        obj[cleanHeader] = rowValues[index] || "";
+      });
+      results.push(obj);
+    }
+
+    return results;
+  }
+
+  // Import vocabulary list from CSV file
+  async function handleImportCSV(e: React.ChangeEvent<HTMLInputElement>) {
+    setBackupMessage("");
+    setBackupIsError(false);
+
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      try {
+        const text = event.target?.result as string;
+        const parsedRows = parseCSV(text);
+
+        if (parsedRows.length === 0) {
+          setBackupMessage("Die ausgewählte Datei enthält keine gültigen Vokabeln.");
+          setBackupIsError(true);
+          return;
+        }
+
+        let importCount = 0;
+        for (const row of parsedRows) {
+          if (!row.hanzi || !row.germanMeaning) continue;
+
+          const vocab: Vocabulary = {
+            id: row.id || crypto.randomUUID(),
+            hanzi: row.hanzi.trim(),
+            pinyin: row.pinyin ? row.pinyin.trim() : "",
+            pinyinNumber: row.pinyinNumber ? row.pinyinNumber.trim() : "",
+            germanMeaning: row.germanMeaning.trim(),
+            createdAt: row.createdAt || new Date().toISOString(),
+            learned: row.learned === "true",
+            bestScore: Number(row.bestScore) || 0,
+            difficulty: (row.difficulty === "medium" || row.difficulty === "hard") ? row.difficulty : "easy",
+            learnedAt: row.learnedAt || undefined,
+            lastPracticedAt: row.lastPracticedAt || undefined,
+            teacherAudioId: row.teacherAudioId || undefined,
+            teacherAudioLocalPath: row.teacherAudioLocalPath || undefined,
+          };
+
+          await importVocab(vocab);
+          importCount++;
+        }
+
+        setBackupMessage(`Erfolgreich ${importCount} Vokabeln importiert und aktualisiert!`);
+        setBackupIsError(false);
+        if (fileInputRef.current) fileInputRef.current.value = "";
+      } catch (err) {
+        console.error(err);
+        setBackupMessage("Fehler beim Lesen oder Einpflegen der CSV-Datei.");
+        setBackupIsError(true);
+      }
+    };
+    reader.onerror = () => {
+      setBackupMessage("Fehler beim Lesen der Datei.");
+      setBackupIsError(true);
+    };
+    reader.readAsText(file);
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -153,6 +366,73 @@ export default function StudentSettings() {
               {loading ? de.admin.saving : t.saveBtn}
             </button>
           </form>
+        </section>
+
+        {/* Offline-Backup & Übertragung */}
+        <section className="mt-6 p-6 bg-neutral-900 border border-neutral-800 rounded-2xl space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-center">
+              <Download size={18} className="text-teal-400" />
+            </div>
+            <div>
+              <h2 className="text-xl font-bold">Daten-Backup & Übertragung</h2>
+              <p className="text-neutral-500 text-xs mt-0.5">Vokabeln lokal sichern oder auf andere Geräte übertragen</p>
+            </div>
+          </div>
+
+          <div className="p-4 bg-neutral-950/50 border border-neutral-850 rounded-xl space-y-2.5">
+            <div className="flex gap-2 text-teal-400">
+              <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+              <p className="text-[11px] font-medium leading-normal">
+                Deine Vokabelkarten werden aus Datenschutzgründen rein lokal (offline) in diesem Browser gespeichert. Wenn du den Browser löschst oder das Gerät wechselst, gehen die Daten verloren.
+              </p>
+            </div>
+            <p className="text-[10px] text-neutral-500 leading-normal">
+              Nutze den CSV-Export, um deine Wörter herunterzuladen. Auf dem neuen Gerät kannst du die Datei hochladen, um deine Vokabelliste vollständig wiederherzustellen.
+            </p>
+          </div>
+
+          {backupMessage && (
+            <div className={`p-3 rounded-xl text-center text-xs flex items-center justify-center gap-2 font-medium ${
+              backupIsError
+                ? "bg-red-500/20 text-red-400 border border-red-900/40"
+                : "bg-emerald-500/20 text-emerald-400 border border-emerald-900/40"
+            }`}>
+              {!backupIsError && <CheckCircle2 size={14} />}
+              {backupMessage}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            {/* Export */}
+            <button
+              type="button"
+              onClick={handleExportCSV}
+              className="flex items-center justify-center gap-2 p-3 bg-neutral-800 hover:bg-neutral-750 border border-neutral-700 hover:border-neutral-600 rounded-xl text-xs font-bold text-neutral-200 hover:text-white transition-all active:scale-98 cursor-pointer"
+            >
+              <Download size={14} />
+              Vokabeln exportieren (CSV)
+            </button>
+
+            {/* Import */}
+            <div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv"
+                onChange={handleImportCSV}
+                className="hidden"
+                id="csv-import-input"
+              />
+              <label
+                htmlFor="csv-import-input"
+                className="flex items-center justify-center gap-2 p-3 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/25 hover:border-teal-500/40 rounded-xl text-xs font-bold text-teal-400 transition-all active:scale-98 cursor-pointer text-center"
+              >
+                <Upload size={14} />
+                Vokabeln importieren (CSV)
+              </label>
+            </div>
+          </div>
         </section>
       </div>
     </div>

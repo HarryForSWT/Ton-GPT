@@ -2,7 +2,7 @@ import Link from "next/link";
 import { logout } from "../auth/actions";
 import { de } from "@/locales/de";
 import { createClient } from "@/utils/supabase/server";
-import { Bell, Volume2 } from "lucide-react";
+import { Bell, Gamepad2 } from "lucide-react";
 import { ThemeSwitcher } from "@/components/ui/ThemeSwitcher";
 import { cookies } from "next/headers";
 
@@ -101,17 +101,19 @@ export default async function StudentDashboard() {
           <p className="text-neutral-400 text-sm">{t.vocabListDesc}</p>
         </Link>
 
+        {/* Hör-Übung tile has been removed (now available under Spiele & Mini-Games) */}
+
         <Link
-          href="/student/practice/listening"
-          className="p-6 bg-neutral-900/60 border border-neutral-800/80 rounded-2xl hover:border-amber-500/60 hover:bg-neutral-850/30 transition-all group duration-300"
+          href="/student/games"
+          className="p-6 bg-neutral-900/60 border border-neutral-800/80 rounded-2xl hover:border-pink-500/60 hover:bg-neutral-850/30 transition-all group duration-300"
         >
-          <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center mb-4">
-            <Volume2 size={20} className="text-amber-400" />
+          <div className="w-10 h-10 rounded-xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center mb-4">
+            <Gamepad2 size={20} className="text-pink-400" />
           </div>
-          <h2 className="text-xl font-bold mb-2 group-hover:text-amber-400 transition-colors">
-            Hören üben
+          <h2 className="text-xl font-bold mb-2 group-hover:text-pink-400 transition-colors">
+            Spiele & Mini-Games
           </h2>
-          <p className="text-neutral-400 text-sm">Trainiere dein Hörverstehen und ordne Aussprachen dem Pinyin zu</p>
+          <p className="text-neutral-400 text-sm">Trainiere spielerisch mit Wischgesten oder anderen Töne-Spielen</p>
         </Link>
 
         <Link

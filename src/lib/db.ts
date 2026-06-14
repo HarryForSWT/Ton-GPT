@@ -10,6 +10,8 @@ export interface Vocabulary {
   learned: boolean;
   bestScore: number;
   difficulty: 'easy' | 'medium' | 'hard';
+  srsStage?: number;
+  nextReviewAt?: string;
   lastPracticedAt?: string;
   learnedAt?: string;
   teacherAudioId?: string;
@@ -40,6 +42,7 @@ interface TonGPTSchema extends DBSchema {
         total: number;
         correct: number;
         timestamp: string;
+        type?: 'listening' | 'tone';
       }[];
     };
   };
@@ -108,7 +111,9 @@ export async function getVocabList(): Promise<Vocabulary[]> {
   return list.map(item => ({
     ...item,
     learned: !!item.learned,
-    difficulty: item.difficulty || 'easy'
+    difficulty: item.difficulty || 'easy',
+    srsStage: item.srsStage !== undefined ? item.srsStage : 0,
+    nextReviewAt: item.nextReviewAt || item.createdAt || new Date().toISOString()
   }));
 }
 
@@ -120,12 +125,14 @@ export async function getVocabById(id: string): Promise<Vocabulary | undefined> 
   return {
     ...item,
     learned: !!item.learned,
-    difficulty: item.difficulty || 'easy'
+    difficulty: item.difficulty || 'easy',
+    srsStage: item.srsStage !== undefined ? item.srsStage : 0,
+    nextReviewAt: item.nextReviewAt || item.createdAt || new Date().toISOString()
   };
 }
 
 export async function addVocab(
-  vocabData: Omit<Vocabulary, 'id' | 'createdAt' | 'learned' | 'bestScore'> & { id?: string }
+  vocabData: Omit<Vocabulary, 'id' | 'createdAt' | 'learned' | 'bestScore' | 'srsStage' | 'nextReviewAt'> & { id?: string }
 ): Promise<string> {
   const db = await getDB();
   if (!db) throw new Error('IndexedDB not available');
@@ -140,6 +147,8 @@ export async function addVocab(
     createdAt: new Date().toISOString(),
     learned: false,
     bestScore: 0,
+    srsStage: 0,
+    nextReviewAt: new Date().toISOString(),
   };
   await db.put('vocabulary', newVocab);
   return id;
@@ -150,6 +159,36 @@ export async function updateVocab(vocab: Vocabulary): Promise<string> {
   if (!db) throw new Error('IndexedDB not available');
   await db.put('vocabulary', vocab);
   return vocab.id;
+}
+
+export async function importVocab(vocab: Vocabulary): Promise<void> {
+  const db = await getDB();
+  if (!db) throw new Error('IndexedDB not available');
+  await db.put('vocabulary', vocab);
+}
+
+export async function updateSRS(vocabId: string, isSuccess: boolean): Promise<void> {
+  const db = await getDB();
+  if (!db) return;
+  const vocab = await db.get('vocabulary', vocabId);
+  if (!vocab) return;
+
+  let stage = vocab.srsStage !== undefined ? vocab.srsStage : 0;
+  if (isSuccess) {
+    stage = Math.min(stage + 1, 5);
+  } else {
+    stage = Math.max(stage - 1, 0);
+  }
+
+  // Intervals in days for SRS: [immediate, 1 day, 3 days, 7 days, 14 days, 30 days]
+  const intervals = [0, 1, 3, 7, 14, 30];
+  const days = intervals[stage];
+  const nextReview = new Date();
+  nextReview.setDate(nextReview.getDate() + days);
+
+  vocab.srsStage = stage;
+  vocab.nextReviewAt = nextReview.toISOString();
+  await db.put('vocabulary', vocab);
 }
 
 export async function deleteVocab(id: string): Promise<void> {
@@ -233,6 +272,7 @@ export interface DailyActivity {
     total: number;
     correct: number;
     timestamp: string;
+    type?: 'listening' | 'tone';
   }[];
 }
 
@@ -284,6 +324,31 @@ export async function saveListeningSessionResult(correct: number, total: number)
     total,
     correct,
     timestamp: new Date().toISOString(),
+    type: 'listening',
+  });
+
+  await db.put('progress', dayProgress);
+}
+
+export async function saveToneSessionResult(correct: number, total: number): Promise<void> {
+  const db = await getDB();
+  if (!db) return;
+
+  const dateStr = getLocalDateString();
+  const dayProgress = (await db.get('progress', dateStr)) || {
+    date: dateStr,
+    practicedWords: [],
+  };
+
+  if (!dayProgress.listeningSessions) {
+    dayProgress.listeningSessions = [];
+  }
+
+  dayProgress.listeningSessions.push({
+    total,
+    correct,
+    timestamp: new Date().toISOString(),
+    type: 'tone',
   });
 
   await db.put('progress', dayProgress);
