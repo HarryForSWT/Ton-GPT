@@ -68,7 +68,7 @@ export async function GET(request: Request) {
 
     // Send emails to students
     const sentResponseIds: string[] = [];
-    for (const [_, entry] of studentEmailsToSent.entries()) {
+    for (const entry of studentEmailsToSent.values()) {
       await sendStudentFeedbackEmail(entry.email, entry.name, entry.topics);
       sentResponseIds.push(...entry.responseIds);
     }
@@ -197,8 +197,8 @@ export async function GET(request: Request) {
       }
     });
 
-  } catch (error: any) {
+  } catch (error) {
     console.error('Hourly Email Cron Error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }

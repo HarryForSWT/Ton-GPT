@@ -1,4 +1,4 @@
-import { pinyinSymbolToNumber, pinyinNumberToSymbol, suggestPinyin } from "./pinyinConverter";
+import { pinyinSymbolToNumber, suggestPinyin } from "./pinyinConverter";
 
 console.log("suggestPinyin('脚镣'):", suggestPinyin("脚镣"));
 console.log("pinyinSymbolToNumber('jiǎo liào'):", pinyinSymbolToNumber("jiǎo liào"));

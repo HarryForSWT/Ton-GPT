@@ -245,7 +245,7 @@ export default function StudentSettings() {
         const toSave: Vocabulary[] = [];
         const toDeleteIds = new Set<string>();
 
-        for (const [hanzi, items] of groups.entries()) {
+        for (const [, items] of groups.entries()) {
           // Sort items by createdAt ascending (oldest first)
           items.sort((a, b) => {
             const timeA = new Date(a.createdAt).getTime();
