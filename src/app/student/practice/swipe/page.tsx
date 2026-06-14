@@ -58,6 +58,7 @@ export default function SwipeTonesPage() {
   // Feedback States
   const [lastActionFeedback, setLastActionFeedback] = useState<"correct" | "incorrect" | null>(null);
   const activeAudioRef = useRef<HTMLAudioElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
 
   // Touch Gesture References
   // Removed touchStartRef since gestures are replaced by buttons
@@ -155,10 +156,11 @@ export default function SwipeTonesPage() {
   };
 
   const playFeedbackSound = (correct: boolean) => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || !audioCtxRef.current) return;
     try {
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      const audioCtx = new AudioContextClass();
+      const audioCtx = audioCtxRef.current;
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
       const osc = audioCtx.createOscillator();
       const gain = audioCtx.createGain();
       osc.connect(gain);
@@ -209,6 +211,17 @@ export default function SwipeTonesPage() {
         }
         const audio = new Audio();
         audio.play().catch(() => {});
+        
+        // Initialize Web Audio API for feedback sounds on mobile iOS
+        if (!audioCtxRef.current) {
+          const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+          if (AudioContextClass) {
+            audioCtxRef.current = new AudioContextClass();
+          }
+        }
+        if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+          audioCtxRef.current.resume();
+        }
       } catch (e) {
         console.error("Autoplay unlock failed", e);
       }
@@ -502,12 +515,12 @@ export default function SwipeTonesPage() {
                     <div
                       key={sIdx}
                       className={`px-4 py-2 rounded-xl text-center border font-mono transition-all duration-200 ${
-                        isActive
-                          ? "border-pink-500 bg-pink-500/10 text-white font-extrabold scale-105 animate-pulse"
-                          : hasAnswered
-                            ? isAnswerCorrect
-                              ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400"
-                              : "border-red-500/40 bg-red-500/10 text-red-400"
+                        hasAnswered
+                          ? isAnswerCorrect
+                            ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-400 scale-105"
+                            : "border-red-500/40 bg-red-500/10 text-red-400 scale-105"
+                          : isActive
+                            ? "border-pink-500 bg-pink-500/10 text-white font-extrabold scale-105 animate-pulse"
                             : "border-neutral-800 bg-neutral-900/60 text-neutral-500"
                       }`}
                     >
@@ -516,7 +529,7 @@ export default function SwipeTonesPage() {
                         <span className="text-[10px] block opacity-85 mt-0.5">
                           {isAnswerCorrect 
                             ? (syl.tone === 5 ? "Neutral" : `Ton ${syl.tone}`) 
-                            : `Falsch (${answer === 5 ? "N" : answer})`}
+                            : `Falsch! (Richtig: ${syl.tone === 5 ? "N" : syl.tone})`}
                         </span>
                       )}
                     </div>
