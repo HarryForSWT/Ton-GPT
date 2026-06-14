@@ -254,6 +254,19 @@ export default function ListeningPracticePage() {
   const handleStartPractice = () => {
     if (filteredWords.length < 10) return;
 
+    // Autoplay unlock for Speech Synthesis and Audio (triggered directly by user gesture click)
+    if (typeof window !== "undefined") {
+      try {
+        if (window.speechSynthesis) {
+          window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
+        }
+        const audio = new Audio();
+        audio.play().catch(() => {});
+      } catch (e) {
+        console.error("Autoplay unlock failed", e);
+      }
+    }
+
     // Shuffle und auf gewählte Anzahl beschränken
     const shuffledPool = [...filteredWords].sort(() => Math.random() - 0.5);
     const count = Math.min(questionCount, shuffledPool.length);

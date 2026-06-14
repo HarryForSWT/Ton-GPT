@@ -190,11 +190,14 @@ export default function StudentSettings() {
           return;
         }
 
-        let importCount = 0;
+        // Get all existing vocabulary from DB
+        const existingVocab = await getVocabList();
+
+        // Parse CSV items into Vocabulary objects
+        const csvVocabs: Vocabulary[] = [];
         for (const row of parsedRows) {
           if (!row.hanzi || !row.germanMeaning) continue;
-
-          const vocab: Vocabulary = {
+          csvVocabs.push({
             id: row.id || crypto.randomUUID(),
             hanzi: row.hanzi.trim(),
             pinyin: row.pinyin ? row.pinyin.trim() : "",
@@ -208,13 +211,67 @@ export default function StudentSettings() {
             lastPracticedAt: row.lastPracticedAt || undefined,
             teacherAudioId: row.teacherAudioId || undefined,
             teacherAudioLocalPath: row.teacherAudioLocalPath || undefined,
-          };
-
-          await importVocab(vocab);
-          importCount++;
+          });
         }
 
-        setBackupMessage(`Erfolgreich ${importCount} Vokabeln importiert und aktualisiert!`);
+        // Combine existing database items and new CSV items
+        const combined = [...existingVocab, ...csvVocabs];
+
+        // Group by Hanzi
+        const groups = new Map<string, Vocabulary[]>();
+        for (const item of combined) {
+          const key = item.hanzi.trim();
+          if (!groups.has(key)) {
+            groups.set(key, []);
+          }
+          groups.get(key)!.push(item);
+        }
+
+        const toSave: Vocabulary[] = [];
+        const toDeleteIds = new Set<string>();
+
+        for (const [hanzi, items] of groups.entries()) {
+          // Sort items by createdAt ascending (oldest first)
+          items.sort((a, b) => {
+            const timeA = new Date(a.createdAt).getTime();
+            const timeB = new Date(b.createdAt).getTime();
+            if (isNaN(timeA) && isNaN(timeB)) return 0;
+            if (isNaN(timeA)) return 1;
+            if (isNaN(timeB)) return -1;
+            return timeA - timeB;
+          });
+
+          const oldest = items[0];
+          toSave.push(oldest);
+
+          // All other items with the same Hanzi are duplicates to be removed
+          for (let i = 1; i < items.length; i++) {
+            const duplicate = items[i];
+            const isFromDB = existingVocab.some(v => v.id === duplicate.id);
+            if (isFromDB && duplicate.id !== oldest.id) {
+              toDeleteIds.add(duplicate.id);
+            }
+          }
+        }
+
+        // Delete duplicates from the database
+        const { deleteVocabWithAudio } = await import("@/lib/db");
+        for (const idToDelete of toDeleteIds) {
+          await deleteVocabWithAudio(idToDelete);
+        }
+
+        // Save/Import the oldest versions to the database
+        let importCount = 0;
+        for (const vocab of toSave) {
+          // Only save/update if it was in the incoming CSV (no need to update unchanged existing items)
+          const isFromCSV = csvVocabs.some(v => v.id === vocab.id);
+          if (isFromCSV) {
+            await importVocab(vocab);
+            importCount++;
+          }
+        }
+
+        setBackupMessage(`Erfolgreich ${importCount} Vokabeln importiert (Duplikate bereinigt, älteste Einträge behalten)!`);
         setBackupIsError(false);
         if (fileInputRef.current) fileInputRef.current.value = "";
       } catch (err) {

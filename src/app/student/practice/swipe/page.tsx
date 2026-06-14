@@ -201,6 +201,19 @@ export default function SwipeTonesPage() {
   const handleStart = () => {
     if (filteredWords.length < 10) return;
 
+    // Autoplay unlock for Speech Synthesis and Audio (triggered directly by user gesture click)
+    if (typeof window !== "undefined") {
+      try {
+        if (window.speechSynthesis) {
+          window.speechSynthesis.speak(new SpeechSynthesisUtterance(""));
+        }
+        const audio = new Audio();
+        audio.play().catch(() => {});
+      } catch (e) {
+        console.error("Autoplay unlock failed", e);
+      }
+    }
+
     const shuffled = [...filteredWords].sort(() => Math.random() - 0.5);
     const count = Math.min(questionCount, shuffled.length);
     const pool = shuffled.slice(0, count);
