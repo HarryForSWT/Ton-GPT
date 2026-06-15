@@ -75,6 +75,7 @@ CRON_SECRET=dein-sicheres-passwort
 
 > **Hinweis:** Der `SUPABASE_SERVICE_ROLE_KEY` wird für Admin-Funktionen benötigt (Passwort-Reset, Lehrer-Registrierung).
 > **Absender-E-Mail:** Trage bei `RESEND_FROM_EMAIL` deine verifizierte Resend-Domain ein (z. B. `Ton-GPT <noreply@deine-domain.de>`). Wenn du `onboarding@resend.dev` nutzt, erlaubt Resend in der Sandbox den Mailversand nur an deine eigene registrierte E-Mail-Adresse.
+> **Test-Tipp für Gmail (Sandbox):** Da die Datenbank für jeden Benutzer eine einzigartige E-Mail-Adresse verlangt, kannst du für Schüler und Lehrer Gmail-Plus-Aliasse nutzen (z. B. `name@gmail.com` für den Schüler und `name+teacher@gmail.com` für den Lehrer). Resend leitet beide E-Mails an denselben registrierten Gmail-Posteingang weiter.
 > **Cronjobs:** Die Route `/api/cron/hourly-email` muss regelmäßig (z. B. über cron-job.org) mit dem Header `Authorization: Bearer <CRON_SECRET>` aufgerufen werden.
 
 ### Datenbank-Migration
