@@ -69,10 +69,12 @@ NEXT_PUBLIC_SUPABASE_URL=https://dein-projekt.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=dein-anon-key
 SUPABASE_SERVICE_ROLE_KEY=dein-service-role-key
 RESEND_API_KEY=dein-resend-key
+RESEND_FROM_EMAIL="Ton-GPT <onboarding@resend.dev>"
 CRON_SECRET=dein-sicheres-passwort
 ```
 
 > **Hinweis:** Der `SUPABASE_SERVICE_ROLE_KEY` wird für Admin-Funktionen benötigt (Passwort-Reset, Lehrer-Registrierung).
+> **Absender-E-Mail:** Trage bei `RESEND_FROM_EMAIL` deine verifizierte Resend-Domain ein (z. B. `Ton-GPT <noreply@deine-domain.de>`). Wenn du `onboarding@resend.dev` nutzt, erlaubt Resend in der Sandbox den Mailversand nur an deine eigene registrierte E-Mail-Adresse.
 > **Cronjobs:** Die Route `/api/cron/hourly-email` muss regelmäßig (z. B. über cron-job.org) mit dem Header `Authorization: Bearer <CRON_SECRET>` aufgerufen werden.
 
 ### Datenbank-Migration
@@ -126,10 +128,15 @@ npm start
 Deployed auf **[Vercel](https://vercel.com)** via GitHub-Integration.
 Bei jedem `git push` auf `main` wird automatisch neu deployed.
 
-**Environment Variables** müssen in den Vercel Project Settings konfiguriert werden:
+**Environment Variables** müssen in den Vercel Project Settings konfiguriert werden (insgesamt mindestens diese 6 Variablen):
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
+- `RESEND_API_KEY`
+- `RESEND_FROM_EMAIL` (z. B. `Ton-GPT <noreply@deine-domain.de>`)
+- `CRON_SECRET`
+
+Nach dem Hinzufügen von Umgebungsvariablen in Vercel muss zwingend ein **Redeploy** ausgeführt werden, damit diese aktiv werden (Vercel Dashboard -> Deployments -> aktuelles Deployment -> Redeploy).
 
 ## 📁 Projektstruktur
 

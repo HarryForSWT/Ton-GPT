@@ -69,8 +69,12 @@ export async function GET(request: Request) {
     // Send emails to students
     const sentResponseIds: string[] = [];
     for (const entry of studentEmailsToSent.values()) {
-      await sendStudentFeedbackEmail(entry.email, entry.name, entry.topics);
-      sentResponseIds.push(...entry.responseIds);
+      try {
+        await sendStudentFeedbackEmail(entry.email, entry.name, entry.topics);
+        sentResponseIds.push(...entry.responseIds);
+      } catch (err) {
+        console.error(`Failed to send student feedback email to ${entry.email}:`, err);
+      }
     }
 
     // Update emailed_at for sent responses
@@ -169,14 +173,18 @@ export async function GET(request: Request) {
         .single();
       
       if (teacherProfile && teacherProfile.email) {
-        const totalRequests = summary.pwResetIds.length + summary.pronunIds.length;
-        await sendTeacherSummaryEmail(teacherProfile.email, {
-          studentNames: summary.studentNames,
-          topics: summary.topics,
-          requestCount: totalRequests
-        });
-        sentPwResetIds.push(...summary.pwResetIds);
-        sentPronunIds.push(...summary.pronunIds);
+        try {
+          const totalRequests = summary.pwResetIds.length + summary.pronunIds.length;
+          await sendTeacherSummaryEmail(teacherProfile.email, {
+            studentNames: summary.studentNames,
+            topics: summary.topics,
+            requestCount: totalRequests
+          });
+          sentPwResetIds.push(...summary.pwResetIds);
+          sentPronunIds.push(...summary.pronunIds);
+        } catch (err) {
+          console.error(`Failed to send teacher summary email to ${teacherProfile.email}:`, err);
+        }
       }
     }
 
