@@ -16,6 +16,14 @@ export interface UseAudioRecorderResult {
   reset: () => void;
 }
 
+function isSafariOrIOS(): boolean {
+  if (typeof window === 'undefined') return false;
+  const ua = navigator.userAgent;
+  const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isSafari = ua.includes('Safari') && !ua.includes('Chrome') && !ua.includes('Chromium');
+  return isIOS || isSafari;
+}
+
 /**
  * Detect the best supported MIME type for audio recording.
  * - Android Chrome: audio/webm;codecs=opus
@@ -25,13 +33,23 @@ export interface UseAudioRecorderResult {
 function getBestMimeType(): string {
   if (typeof window === 'undefined' || !window.MediaRecorder) return '';
 
-  const types = [
-    'audio/webm;codecs=opus',
-    'audio/webm',
-    'audio/mp4',
-    'audio/ogg;codecs=opus',
-    'audio/ogg',
-  ];
+  const isApple = isSafariOrIOS();
+
+  const types = isApple
+    ? [
+        'audio/mp4',
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/ogg;codecs=opus',
+        'audio/ogg',
+      ]
+    : [
+        'audio/webm;codecs=opus',
+        'audio/webm',
+        'audio/mp4',
+        'audio/ogg;codecs=opus',
+        'audio/ogg',
+      ];
 
   for (const type of types) {
     if (MediaRecorder.isTypeSupported(type)) {
@@ -83,12 +101,27 @@ export function useAudioRecorder(): UseAudioRecorderResult {
     chunksRef.current = [];
 
     try {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+      const isApple = isSafariOrIOS();
+
+      // On mobile devices and Safari, disabling voice processing features triggers hardware-level
+      // audio session glitches, sample rate mismatches, and severe choppiness.
+      // Keeping them enabled leverages the hardware's native audio pipelines, providing a clean stream.
+      const useVoiceProcessing = isMobile || isApple;
+
       const stream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: false,
-          noiseSuppression: false,
-          autoGainControl: false,
-        },
+        audio: useVoiceProcessing
+          ? {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+            }
+          : {
+              echoCancellation: false,
+              noiseSuppression: false,
+              autoGainControl: false,
+            },
       });
 
       streamRef.current = stream;
