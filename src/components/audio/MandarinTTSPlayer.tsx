@@ -14,14 +14,20 @@ export function MandarinTTSPlayer({ text, className = "" }: MandarinTTSPlayerPro
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceNodeRef = useRef<AudioBufferSourceNode | null>(null);
 
   useEffect(() => {
-    // Clean up audio playback on unmount
     return () => {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
+      // Clean up Web Audio API resources on unmount
+      if (sourceNodeRef.current) {
+        try {
+          sourceNodeRef.current.onended = null;
+          sourceNodeRef.current.stop();
+        } catch (e) {}
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+        audioContextRef.current.close().catch((e) => console.error("Error closing AudioContext:", e));
       }
     };
   }, []);
@@ -30,9 +36,12 @@ export function MandarinTTSPlayer({ text, className = "" }: MandarinTTSPlayerPro
     if (!text.trim()) return;
 
     if (isPlaying) {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
+      if (sourceNodeRef.current) {
+        try {
+          sourceNodeRef.current.onended = null;
+          sourceNodeRef.current.stop();
+        } catch (e) {}
+        sourceNodeRef.current = null;
       }
       setIsPlaying(false);
       return;
@@ -42,46 +51,47 @@ export function MandarinTTSPlayer({ text, className = "" }: MandarinTTSPlayerPro
     setError(null);
 
     try {
-      if (!audioRef.current) {
-        const audioUrl = `/api/tts?text=${encodeURIComponent(text.trim())}`;
-        const audio = new Audio(audioUrl);
-        
-        audio.onplay = () => {
-          setLoading(false);
-          setIsPlaying(true);
-        };
-
-        audio.onended = () => {
-          setIsPlaying(false);
-        };
-
-        audio.onerror = () => {
-          setLoading(false);
-          setError("Audio konnte nicht geladen werden.");
-          setIsPlaying(false);
-        };
-
-        audioRef.current = audio;
-        
-        // Play immediately synchronously to bypass iOS Safari autoplay blocking
-        audio.play().catch((err) => {
-          console.error("Audio playback failed:", err);
-          setError("Wiedergabe vom Browser blockiert.");
-          setIsPlaying(false);
-          setLoading(false);
-        });
-      } else {
-        setLoading(false);
-        audioRef.current.play().catch((err) => {
-          console.error("Audio playback failed:", err);
-          setError("Wiedergabe fehlgeschlagen.");
-          setIsPlaying(false);
-        });
+      // 1. Initialize/Resume AudioContext synchronously within user click event to bypass iOS restriction
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) {
+        throw new Error("Web Audio API wird von diesem Browser nicht unterstützt.");
       }
 
+      const ctx = new AudioContextClass();
+      audioContextRef.current = ctx;
+      if (ctx.state === "suspended") {
+        await ctx.resume();
+      }
+
+      // 2. Fetch the audio file asynchronously via AJAX
+      const audioUrl = `/api/tts?text=${encodeURIComponent(text.trim())}`;
+      const response = await fetch(audioUrl);
+      if (!response.ok) {
+        throw new Error(`HTTP-Fehler! Status: ${response.status}`);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+
+      // 3. Decode the WAV file
+      const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
+
+      // 4. Create and play the source node
+      const source = ctx.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(ctx.destination);
+
+      source.onended = () => {
+        setIsPlaying(false);
+      };
+
+      sourceNodeRef.current = source;
+      setIsPlaying(true);
+      setLoading(false);
+      source.start(0);
+
     } catch (err) {
-      console.error("Error setting up audio:", err);
-      setError("Verbindungsfehler beim Aussprache-Dienst.");
+      console.error("Web Audio playback failed:", err);
+      setError("Audio konnte nicht geladen werden.");
       setLoading(false);
       setIsPlaying(false);
     }
