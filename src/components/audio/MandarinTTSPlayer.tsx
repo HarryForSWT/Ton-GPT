@@ -67,16 +67,40 @@ export function MandarinTTSPlayer({ text, className = "" }: MandarinTTSPlayerPro
         await ctx.resume();
       }
 
-      // 2. Fetch the audio file asynchronously via AJAX
+      // 2. Fetch the audio file (check Cache Storage first, fallback to network)
       const audioUrl = `/api/tts?text=${encodeURIComponent(text.trim())}`;
-      const response = await fetch(audioUrl);
-      if (!response.ok) {
-        throw new Error(`HTTP-Fehler! Status: ${response.status}`);
+      let arrayBuffer: ArrayBuffer;
+
+      let cache: Cache | undefined;
+      let cachedResponse: Response | undefined;
+      try {
+        if (typeof window !== "undefined" && "caches" in window) {
+          cache = await caches.open("gemini-tts-cache");
+          cachedResponse = await cache.match(audioUrl);
+        }
+      } catch (cacheErr) {
+        console.warn("Cache match failed, using network:", cacheErr);
       }
 
-      const arrayBuffer = await response.arrayBuffer();
+      if (cachedResponse) {
+        arrayBuffer = await cachedResponse.arrayBuffer();
+      } else {
+        const response = await fetch(audioUrl);
+        if (!response.ok) {
+          throw new Error(`HTTP-Fehler! Status: ${response.status}`);
+        }
 
-      // 3. Decode the WAV file
+        if (cache) {
+          try {
+            await cache.put(audioUrl, response.clone());
+          } catch (cachePutErr) {
+            console.warn("Failed to write to cache:", cachePutErr);
+          }
+        }
+        arrayBuffer = await response.arrayBuffer();
+      }
+
+      // 3. Decode the WAV/MP3 file
       const audioBuffer = await ctx.decodeAudioData(arrayBuffer);
 
       // 4. Create and play the source node

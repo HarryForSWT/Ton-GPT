@@ -36,18 +36,51 @@ function pcmToWav(pcmBuffer: Buffer, sampleRate: number = 24000): Buffer {
   return Buffer.concat([wavHeader, pcmBuffer]);
 }
 
-export async function GET(req: NextRequest) {
+// Helper function to fetch Google Translate TTS as a fallback
+async function fetchGoogleTranslateTts(text: string): Promise<NextResponse | null> {
   try {
-    const { searchParams } = new URL(req.url);
-    const text = searchParams.get("text");
-    if (!text) {
-      return NextResponse.json({ error: "Text-Parameter fehlt." }, { status: 400 });
+    console.log(`[TTS] Falling back to Google Translate for: "${text}"`);
+    const fallbackUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=zh-CN&client=tw-ob&q=${encodeURIComponent(text.trim())}`;
+    const response = await fetch(fallbackUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+      },
+    });
+
+    if (!response.ok) {
+      console.error("[TTS] Google Translate fallback failed status:", response.status);
+      return null;
     }
 
+    const buffer = await response.arrayBuffer();
+    return new NextResponse(new Uint8Array(buffer), {
+      headers: {
+        "Content-Type": "audio/mpeg",
+        "Cache-Control": "public, max-age=31536000, immutable",
+      },
+    });
+  } catch (err) {
+    console.error("[TTS] Google Translate fallback exception:", err);
+    return null;
+  }
+}
+
+export async function GET(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const text = searchParams.get("text");
+  
+  if (!text) {
+    return NextResponse.json({ error: "Text-Parameter fehlt." }, { status: 400 });
+  }
+
+  try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
+      console.warn("[TTS] GEMINI_API_KEY is not configured on the server. Trying Google Translate fallback.");
+      const fallback = await fetchGoogleTranslateTts(text);
+      if (fallback) return fallback;
       return NextResponse.json(
-        { error: "GEMINI_API_KEY ist auf dem Server nicht konfiguriert." },
+        { error: "GEMINI_API_KEY ist auf dem Server nicht konfiguriert und Fallback schlug fehl." },
         { status: 500 }
       );
     }
@@ -86,7 +119,10 @@ export async function GET(req: NextRequest) {
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error("Gemini TTS API error status:", response.status, errText);
+      console.warn(`[TTS] Gemini API failed with status ${response.status} (${errText}). Trying Google Translate fallback.`);
+      const fallback = await fetchGoogleTranslateTts(text);
+      if (fallback) return fallback;
+      
       return NextResponse.json(
         { error: "Fehler bei der Kommunikation mit dem Aussprache-Dienst." },
         { status: 502 }
@@ -108,7 +144,10 @@ export async function GET(req: NextRequest) {
     );
 
     if (!audioPart || !audioPart.inlineData || !audioPart.inlineData.data) {
-      console.error("No audio data returned from Gemini TTS API:", data);
+      console.warn("[TTS] No audio data returned from Gemini TTS API. Trying Google Translate fallback.", data);
+      const fallback = await fetchGoogleTranslateTts(text);
+      if (fallback) return fallback;
+
       return NextResponse.json(
         { error: "Keine Audio-Daten empfangen." },
         { status: 502 }
@@ -121,7 +160,7 @@ export async function GET(req: NextRequest) {
     // Add WAV header (Gemini TTS returns PCM 16-bit 24kHz mono)
     const wavBuffer = pcmToWav(pcmBuffer, 24000);
 
-    // Serve the WAV file with strong Cache-Control headers (caching is safe since the text audio doesn't change)
+    // Serve the WAV file with strong Cache-Control headers
     return new NextResponse(new Uint8Array(wavBuffer), {
       headers: {
         "Content-Type": "audio/wav",
@@ -129,7 +168,10 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("TTS API Route Exception:", error);
+    console.error("[TTS] API Route Exception, falling back to Google Translate:", error);
+    const fallback = await fetchGoogleTranslateTts(text);
+    if (fallback) return fallback;
+
     return NextResponse.json({ error: "Interner Serverfehler." }, { status: 500 });
   }
 }
