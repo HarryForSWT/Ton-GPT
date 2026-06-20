@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { Volume2, AlertTriangle, Square } from "lucide-react";
+import { Volume2, AlertTriangle, Square, Loader2 } from "lucide-react";
 
 interface MandarinTTSPlayerProps {
   text: string;
@@ -11,108 +11,100 @@ interface MandarinTTSPlayerProps {
 
 export function MandarinTTSPlayer({ text, className = "" }: MandarinTTSPlayerProps) {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [voice, setVoice] = useState<SpeechSynthesisVoice | null>(null);
-  const [hasCheckedVoices, setHasCheckedVoices] = useState(false);
-  const [voicesError, setVoicesError] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
-  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
-
-  // Find the best Mandarin voice
-  const findMandarinVoice = () => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
-
-    const allVoices = window.speechSynthesis.getVoices();
-    if (allVoices.length === 0) return;
-
-    // Prefer zh-CN, zh-Hans, zh, then others like zh-HK, zh-TW
-    const mandarinLocales = ["zh-CN", "zh-Hans", "zh"];
-    
-    // 1. Try exact match for preferred locales
-    for (const locale of mandarinLocales) {
-      const found = allVoices.find(v => v.lang.toLowerCase() === locale.toLowerCase() || v.lang.toLowerCase().replace('_', '-') === locale.toLowerCase());
-      if (found) {
-        setVoice(found);
-        setVoicesError(false);
-        setHasCheckedVoices(true);
-        return;
-      }
-    }
-
-    // 2. Try any language tag starting with zh
-    const anyZh = allVoices.find(v => v.lang.toLowerCase().startsWith("zh"));
-    if (anyZh) {
-      setVoice(anyZh);
-      setVoicesError(false);
-      setHasCheckedVoices(true);
-      return;
-    }
-
-    // No Mandarin voice found
-    setVoice(null);
-    setVoicesError(true);
-    setHasCheckedVoices(true);
-  };
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
-
-    // SpeechSynthesis voices are loaded asynchronously in some browsers
-    findMandarinVoice();
-    
-    if (window.speechSynthesis.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = findMandarinVoice;
-    }
-
+    // Clean up audio playback on unmount
     return () => {
-      if (window.speechSynthesis) {
-        window.speechSynthesis.cancel();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
       }
     };
   }, []);
 
-  const handlePlay = () => {
-    if (typeof window === "undefined" || !window.speechSynthesis) return;
+  const handlePlay = async () => {
+    if (!text.trim()) return;
 
     if (isPlaying) {
-      window.speechSynthesis.cancel();
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
       setIsPlaying(false);
       return;
     }
 
-    // Speak the text (Hanzi characters) directly so the browser's Chinese TTS engine pronounces it correctly
-    const utterance = new SpeechSynthesisUtterance(text);
-    utteranceRef.current = utterance;
+    setLoading(true);
+    setError(null);
 
-    if (voice) {
-      utterance.voice = voice;
-    } else {
-      // Direct browser fallback language
-      utterance.lang = "zh-CN";
+    try {
+      if (!audioRef.current) {
+        const audioUrl = `/api/tts?text=${encodeURIComponent(text.trim())}`;
+        const audio = new Audio(audioUrl);
+        
+        audio.oncanplaythrough = () => {
+          setLoading(false);
+          audio.play().catch((err) => {
+            console.error("Audio playback failed:", err);
+            setError("Wiedergabe fehlgeschlagen.");
+            setIsPlaying(false);
+          });
+        };
+
+        audio.onplay = () => {
+          setIsPlaying(true);
+        };
+
+        audio.onended = () => {
+          setIsPlaying(false);
+        };
+
+        audio.onerror = () => {
+          setLoading(false);
+          setError("Audio konnte nicht von Gemini geladen werden.");
+          setIsPlaying(false);
+        };
+
+        audioRef.current = audio;
+      } else {
+        setLoading(false);
+        audioRef.current.play().catch((err) => {
+          console.error("Audio playback failed:", err);
+          setError("Wiedergabe fehlgeschlagen.");
+          setIsPlaying(false);
+        });
+      }
+    } catch (err) {
+      console.error("Error setting up audio:", err);
+      setError("Verbindungsfehler beim Aussprache-Dienst.");
+      setLoading(false);
+      setIsPlaying(false);
     }
-
-    // Slow down speed for clear educational listening
-    utterance.rate = 0.45;
-
-    utterance.onstart = () => setIsPlaying(true);
-    utterance.onend = () => setIsPlaying(false);
-    utterance.onerror = () => setIsPlaying(false);
-
-    window.speechSynthesis.speak(utterance);
   };
 
   return (
-    <div className={`space-y-2.5 ${className}`}>
+    <div className={`space-y-2 ${className}`}>
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
         <button
           type="button"
           onClick={handlePlay}
-          className={`flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm transition-all active:scale-95 shadow-md ${
+          disabled={loading}
+          className={`flex items-center justify-center gap-2 py-3 px-5 rounded-2xl font-bold text-sm transition-all active:scale-95 shadow-md cursor-pointer ${
             isPlaying
               ? "bg-red-500/20 border border-red-500/30 text-red-400 hover:bg-red-500/30"
-              : "bg-blue-500/10 border border-blue-500/25 hover:bg-blue-500/20 text-blue-400 shadow-blue-500/5"
-          }`}
+              : "bg-emerald-500/10 border border-emerald-500/25 hover:bg-emerald-500/20 text-emerald-400 shadow-emerald-500/5"
+          } ${loading ? "opacity-60 cursor-not-allowed" : ""}`}
         >
-          {isPlaying ? (
+          {loading ? (
+            <>
+              <Loader2 size={16} className="animate-spin text-emerald-400" />
+              <span>Lade Gemini-Stimme...</span>
+            </>
+          ) : isPlaying ? (
             <>
               <Square size={16} className="fill-current" />
               <span>Stoppen</span>
@@ -120,19 +112,16 @@ export function MandarinTTSPlayer({ text, className = "" }: MandarinTTSPlayerPro
           ) : (
             <>
               <Volume2 size={16} />
-              <span>🔊 Standardaussprache (TTS)</span>
+              <span>Vorlesen lassen (Gemini Voice)</span>
             </>
           )}
         </button>
-
       </div>
 
-      {voicesError && hasCheckedVoices && (
-        <div className="p-3 bg-amber-950/40 border border-amber-800/60 rounded-xl flex gap-2.5 items-start text-xs text-amber-300">
-          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-amber-400" />
-          <p>
-            Keine chinesische Systemstimme auf deinem Gerät gefunden. Die Aussprache klingt möglicherweise fehlerhaft oder wird nicht abgespielt. Installiere ggf. die Sprachdaten für Mandarin (Chinesisch) in deinen Systemeinstellungen.
-          </p>
+      {error && (
+        <div className="p-3 bg-red-950/40 border border-red-800/60 rounded-xl flex gap-2.5 items-start text-xs text-red-300">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-red-400" />
+          <p>{error}</p>
         </div>
       )}
     </div>
