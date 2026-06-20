@@ -18,8 +18,7 @@
     "pinyin-pro": "^3.28.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "resend": "^6.12.4",
-    "tesseract.js": "^7.0.0"
+    "resend": "^6.12.4"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
