@@ -46,16 +46,8 @@ export function MandarinTTSPlayer({ text, className = "" }: MandarinTTSPlayerPro
         const audioUrl = `/api/tts?text=${encodeURIComponent(text.trim())}`;
         const audio = new Audio(audioUrl);
         
-        audio.oncanplaythrough = () => {
-          setLoading(false);
-          audio.play().catch((err) => {
-            console.error("Audio playback failed:", err);
-            setError("Wiedergabe fehlgeschlagen.");
-            setIsPlaying(false);
-          });
-        };
-
         audio.onplay = () => {
+          setLoading(false);
           setIsPlaying(true);
         };
 
@@ -65,11 +57,19 @@ export function MandarinTTSPlayer({ text, className = "" }: MandarinTTSPlayerPro
 
         audio.onerror = () => {
           setLoading(false);
-          setError("Audio konnte nicht von Gemini geladen werden.");
+          setError("Audio konnte nicht geladen werden.");
           setIsPlaying(false);
         };
 
         audioRef.current = audio;
+        
+        // Play immediately synchronously to bypass iOS Safari autoplay blocking
+        audio.play().catch((err) => {
+          console.error("Audio playback failed:", err);
+          setError("Wiedergabe vom Browser blockiert.");
+          setIsPlaying(false);
+          setLoading(false);
+        });
       } else {
         setLoading(false);
         audioRef.current.play().catch((err) => {
@@ -78,6 +78,7 @@ export function MandarinTTSPlayer({ text, className = "" }: MandarinTTSPlayerPro
           setIsPlaying(false);
         });
       }
+
     } catch (err) {
       console.error("Error setting up audio:", err);
       setError("Verbindungsfehler beim Aussprache-Dienst.");
