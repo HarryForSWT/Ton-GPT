@@ -24,10 +24,12 @@ export function MandarinTTSPlayer({ text, className = "" }: MandarinTTSPlayerPro
         try {
           sourceNodeRef.current.onended = null;
           sourceNodeRef.current.stop();
-        } catch (e) {}
+        } catch {
+          // Ignore error
+        }
       }
       if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-        audioContextRef.current.close().catch((e) => console.error("Error closing AudioContext:", e));
+        audioContextRef.current.close().catch((err) => console.error("Error closing AudioContext:", err));
       }
     };
   }, []);
@@ -40,7 +42,9 @@ export function MandarinTTSPlayer({ text, className = "" }: MandarinTTSPlayerPro
         try {
           sourceNodeRef.current.onended = null;
           sourceNodeRef.current.stop();
-        } catch (e) {}
+        } catch {
+          // Ignore error
+        }
         sourceNodeRef.current = null;
       }
       setIsPlaying(false);
@@ -52,7 +56,7 @@ export function MandarinTTSPlayer({ text, className = "" }: MandarinTTSPlayerPro
 
     try {
       // 1. Initialize/Resume AudioContext synchronously within user click event to bypass iOS restriction
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioContextClass = window.AudioContext || (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
       if (!AudioContextClass) {
         throw new Error("Web Audio API wird von diesem Browser nicht unterstützt.");
       }
