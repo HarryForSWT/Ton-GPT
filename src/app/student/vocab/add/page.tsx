@@ -3,12 +3,13 @@
 import React, { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Save, X, Info } from "lucide-react";
+import { ArrowLeft, Save, X, Info, Camera } from "lucide-react";
 import { addVocab } from "@/lib/db";
 import { de } from "@/locales/de";
 import { Button } from "@/components/ui/Button";
 import { ToneHelper } from "@/components/ui/ToneHelper";
 import { suggestPinyin, pinyinNumberToSymbol, pinyinSymbolToNumber, checkToneSandhi } from "@/lib/pinyinConverter";
+import { useOcr } from "@/hooks/useOcr";
 
 export default function AddVocabularyPage() {
   const router = useRouter();
@@ -29,9 +30,36 @@ export default function AddVocabularyPage() {
 
   // Ref to the pinyin input so we can insert at cursor position
   const pinyinRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { loading: ocrLoading, recognizeText } = useOcr();
 
   // Compute Sandhi Warnings live
   const sandhiWarnings = checkToneSandhi(form.pinyin || form.pinyinNumber);
+
+  const handleOcrFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await recognizeText(file);
+      if (text) {
+        setForm((prev) => {
+          const updated = { ...prev, hanzi: text };
+          const suggestions = suggestPinyin(text);
+          updated.pinyin = suggestions.pinyinSymbol;
+          updated.pinyinNumber = suggestions.pinyinNumber;
+          return updated;
+        });
+        if (error) setError("");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Texterkennung fehlgeschlagen.");
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   const handleSuggestTranslation = async () => {
     if (!form.hanzi.trim()) return;
@@ -163,16 +191,43 @@ export default function AddVocabularyPage() {
             <label htmlFor="hanzi" className="text-sm font-semibold text-neutral-300 block">
               {t.hanziLabel} <span className="text-emerald-500">*</span>
             </label>
-            <input
-              type="text"
-              id="hanzi"
-              name="hanzi"
-              value={form.hanzi}
-              onChange={handleChange}
-              placeholder={t.hanziPlaceholder}
-              className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-2xl p-4 text-white placeholder-neutral-600 transition-all outline-none text-2xl"
-              disabled={loading}
-            />
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                id="hanzi"
+                name="hanzi"
+                value={form.hanzi}
+                onChange={handleChange}
+                placeholder={t.hanziPlaceholder}
+                className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-2xl p-4 pr-16 text-white placeholder-neutral-600 transition-all outline-none text-2xl"
+                disabled={loading || ocrLoading}
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+                {ocrLoading ? (
+                  <div className="w-6 h-6 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mr-2" />
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={loading}
+                      className="p-2.5 text-neutral-400 hover:text-emerald-400 hover:bg-neutral-850 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                      title="Karteikarte fotografieren / OCR"
+                    >
+                      <Camera size={22} />
+                    </button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleOcrFileChange}
+                      className="hidden"
+                    />
+                  </>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Pinyin with tone marks — optional, with helper */}

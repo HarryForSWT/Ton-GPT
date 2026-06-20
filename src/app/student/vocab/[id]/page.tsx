@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, use } from "react";
+import React, { useState, useEffect, use, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Edit2, Trash2, CheckCircle2, Circle, Save, X, Calendar, Info } from "lucide-react";
+import { ArrowLeft, Edit2, Trash2, CheckCircle2, Circle, Save, X, Calendar, Info, Camera } from "lucide-react";
 import { getVocabById, updateVocab, deleteVocabWithAudio, Vocabulary, trackPractice } from "@/lib/db";
 import { de } from "@/locales/de";
 import { Button } from "@/components/ui/Button";
@@ -11,6 +11,7 @@ import { AudioControls } from "@/components/audio/AudioControls";
 import { ToneAnalyser } from "@/components/audio/ToneAnalyser";
 import { MandarinTTSPlayer } from "@/components/audio/MandarinTTSPlayer";
 import { checkToneSandhi, suggestPinyin, pinyinNumberToSymbol, pinyinSymbolToNumber } from "@/lib/pinyinConverter";
+import { useOcr } from "@/hooks/useOcr";
 
 interface VocabularyDetailPageProps {
   params: Promise<{ id: string }>;
@@ -37,8 +38,36 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { loading: ocrLoading, recognizeText } = useOcr();
+
   // Compute Sandhi Warnings live
   const sandhiWarnings = checkToneSandhi(form.pinyin || form.pinyinNumber);
+
+  const handleOcrFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await recognizeText(file);
+      if (text) {
+        setForm((prev) => {
+          const updated = { ...prev, hanzi: text };
+          const suggestions = suggestPinyin(text);
+          updated.pinyin = suggestions.pinyinSymbol;
+          updated.pinyinNumber = suggestions.pinyinNumber;
+          return updated;
+        });
+        if (error) setError("");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Texterkennung fehlgeschlagen.");
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   useEffect(() => {
     getVocabById(id)
@@ -236,14 +265,42 @@ export default function VocabularyDetailPage({ params }: VocabularyDetailPagePro
                 <label className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">
                   {td.fields.hanzi}
                 </label>
-                <input
-                  type="text"
-                  name="hanzi"
-                  value={form.hanzi}
-                  onChange={handleEditChange}
-                  className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl p-3 text-white transition-all outline-none"
-                  required
-                />
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    name="hanzi"
+                    value={form.hanzi}
+                    onChange={handleEditChange}
+                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 rounded-xl p-3 pr-14 text-white transition-all outline-none"
+                    disabled={saving || ocrLoading}
+                    required
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
+                    {ocrLoading ? (
+                      <div className="w-5 h-5 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mr-1" />
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={saving}
+                          className="p-2 text-neutral-400 hover:text-emerald-400 hover:bg-neutral-900 rounded-lg transition-all cursor-pointer flex items-center justify-center"
+                          title="Karteikarte fotografieren / OCR"
+                        >
+                          <Camera size={18} />
+                        </button>
+                        <input
+                          type="file"
+                          ref={fileInputRef}
+                          accept="image/*"
+                          capture="environment"
+                          onChange={handleOcrFileChange}
+                          className="hidden"
+                        />
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">

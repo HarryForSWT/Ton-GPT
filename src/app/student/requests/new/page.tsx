@@ -3,12 +3,14 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Send, ChevronDown, Info } from "lucide-react";
+import { ArrowLeft, Send, ChevronDown, Info, Camera } from "lucide-react";
 import { de } from "@/locales/de";
 import { Button } from "@/components/ui/Button";
 import { useAudioRecorder } from "@/hooks/useAudioRecorder";
 import { getVocabList, Vocabulary } from "@/lib/db";
 import { createPronunciationRequest, uploadAudio } from "@/lib/requests";
+import { suggestPinyin } from "@/lib/pinyinConverter";
+import { useOcr } from "@/hooks/useOcr";
 
 function formatDuration(ms: number): string {
   const s = Math.floor(ms / 1000);
@@ -48,6 +50,46 @@ export default function NewRequestPage() {
   } = useAudioRecorder();
 
   const pinyinRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { loading: ocrLoading, recognizeText } = useOcr();
+
+  const handleOcrFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const text = await recognizeText(file);
+      if (text) {
+        setManualHanzi(text);
+        const suggestions = suggestPinyin(text);
+        setManualPinyin(suggestions.pinyinSymbol || suggestions.pinyinNumber);
+        
+        // Try to automatically load translation suggest as a convenience
+        try {
+          const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text.trim())}&langpair=zh|de`;
+          const res = await fetch(url);
+          const json = await res.json();
+          if (json.responseData && json.responseData.translatedText) {
+            let trans = json.responseData.translatedText.trim();
+            if (trans.endsWith('.')) {
+              trans = trans.slice(0, -1);
+            }
+            setManualMeaning(trans);
+          }
+        } catch (transErr) {
+          console.error("Translation suggestion failed", transErr);
+        }
+        
+        if (error) setError("");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Texterkennung fehlgeschlagen.");
+    } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
 
   useEffect(() => {
     getVocabList().then((list) => {
@@ -201,13 +243,41 @@ export default function NewRequestPage() {
             {/* Hanzi */}
             <div>
               <label className="text-xs text-neutral-500 block mb-1">{t.hanziLabel} <span className="text-emerald-400">*</span></label>
-              <input
-                type="text"
-                value={manualHanzi}
-                onChange={(e) => { setManualHanzi(e.target.value); setSelectedVocabId(""); setError(""); }}
-                placeholder={t.hanziPlaceholder}
-                className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-xl p-3 text-white text-2xl placeholder-neutral-600 outline-none transition-all"
-              />
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  value={manualHanzi}
+                  onChange={(e) => { setManualHanzi(e.target.value); setSelectedVocabId(""); setError(""); }}
+                  placeholder={t.hanziPlaceholder}
+                  className="w-full bg-neutral-950 border border-neutral-800 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-xl p-3 pr-14 text-white text-2xl placeholder-neutral-600 outline-none transition-all"
+                  disabled={ocrLoading || submitting}
+                />
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center">
+                  {ocrLoading ? (
+                    <div className="w-5 h-5 border-2 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin mr-1" />
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={submitting}
+                        className="p-2 text-neutral-400 hover:text-emerald-400 hover:bg-neutral-900 rounded-lg transition-all cursor-pointer flex items-center justify-center"
+                        title="Karteikarte fotografieren / OCR"
+                      >
+                        <Camera size={18} />
+                      </button>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept="image/*"
+                        capture="environment"
+                        onChange={handleOcrFileChange}
+                        className="hidden"
+                      />
+                    </>
+                  )}
+                </div>
+              </div>
             </div>
 
             {/* Pinyin */}
